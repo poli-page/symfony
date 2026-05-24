@@ -9,3 +9,8 @@ parameters:
         - tests
     excludePaths:
         - tests/Fixtures/TestKernel.php
+        # Why: this test mocks PoliPage\Render (final) via dg/bypass-finals
+        # at runtime. PHPStan can't model that bypass and flags the mock's
+        # return type as unresolvable. The behaviour is verified by the test
+        # suite itself; static analysis here is noise.
+        - tests/Unit/Console/RenderCommandTest.php

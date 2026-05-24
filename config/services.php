@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PoliPage\PoliPage;
+use PoliPage\Symfony\Console\RenderCommand;
 use PoliPage\Symfony\EventListener\ErrorListener;
 use PoliPage\Symfony\EventListener\RetryListener;
 use PoliPage\Symfony\Http\PoliPageResponseFactory;
@@ -68,4 +69,10 @@ return static function (ContainerConfigurator $container): void {
     $services->set('poli_page.response_factory', PoliPageResponseFactory::class)
         ->public();
     $services->alias(PoliPageResponseFactory::class, 'poli_page.response_factory')->public();
+
+    // ─── Console command ─────────────────────────────────────────────────────
+
+    $services->set('poli_page.command.render', RenderCommand::class)
+        ->args([service('poli_page.client')])
+        ->tag('console.command');
 };

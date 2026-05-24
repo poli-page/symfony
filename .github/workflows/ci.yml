@@ -51,7 +51,7 @@ jobs:
         working-directory: symfony-bundle
         run: |
           if [ -f phpstan.neon ]; then
-            vendor/bin/phpstan analyse
+            vendor/bin/phpstan analyse --memory-limit=512M
           else
             echo "Skipping phpstan: no phpstan.neon yet"
           fi
