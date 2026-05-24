@@ -1,0 +1,40 @@
+{
+    "name": "poli-page/symfony-bundle-example",
+    "description": "Example Symfony app demonstrating poli-page/symfony-bundle. Not published.",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": "^8.3",
+        "symfony/framework-bundle": "^7.0",
+        "symfony/runtime": "^7.0",
+        "symfony/yaml": "^7.0",
+        "poli-page/symfony-bundle": "@dev",
+        "poli-page/sdk": "@dev",
+        "symfony/dotenv": "^7.0"
+    },
+    "repositories": [
+        { "type": "path", "url": "../", "options": { "symlink": true, "versions": { "poli-page/symfony-bundle": "0.1.0" } } },
+        { "type": "path", "url": "../../sdk-php.md", "options": { "symlink": true, "versions": { "poli-page/sdk": "0.1.0" } } }
+    ],
+    "config": {
+        "allow-plugins": {
+            "symfony/runtime": true,
+            "symfony/flex": false,
+            "php-http/discovery": true
+        }
+    },
+    "autoload": {
+        "psr-4": { "App\\": "src/" }
+    },
+    "scripts": {
+        "auto-scripts": [],
+        "post-install-cmd": ["@auto-scripts"],
+        "post-update-cmd": ["@auto-scripts"]
+    },
+    "extra": {
+        "runtime": {
+            "use_runtime": "Symfony\\Component\\Runtime\\SymfonyRuntime",
+            "project_dir": "."
+        }
+    }
+}

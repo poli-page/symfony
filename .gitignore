@@ -32,7 +32,7 @@ composer.lock
 .phpstan.cache/
 
 # Go
-bin/
+/bin/
 *.test
 *.out
 

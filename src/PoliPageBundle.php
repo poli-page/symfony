@@ -19,9 +19,20 @@ final class PoliPageBundle extends AbstractBundle
             ->children()
                 ->scalarNode('api_key')
                     ->isRequired()
-                    ->cannotBeEmpty()
                     ->validate()
-                        ->ifTrue(static fn (string $v): bool => 1 !== preg_match('/^pp_(test|live)_/', $v))
+                        // Why: env vars take a circuitous path. The validator
+                        // runs TWICE during MergeExtensionConfigurationPass —
+                        // once with the env placeholder (env_<hash>_NAME_<hash>)
+                        // and once with the resolved value (often '' when the
+                        // env is unset at compile time but will be set at
+                        // request time). Skip both placeholder-shaped and empty
+                        // values; the SDK will reject a truly-empty key at
+                        // construction. Reject only non-empty literal strings
+                        // that don't match the pp_test_/pp_live_ prefix.
+                        ->ifTrue(static fn (string $v): bool => '' !== $v
+                            && !str_contains($v, '%env(')
+                            && 1 !== preg_match('/^env_[a-f0-9]{16}_/i', $v)
+                            && 1 !== preg_match('/^pp_(test|live)_/', $v))
                         ->thenInvalid('Poli Page API key must start with pp_test_ or pp_live_. Get one at https://app.poli.page/settings/api-keys. Got: %s')
                     ->end()
                 ->end()
