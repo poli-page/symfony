@@ -90,5 +90,18 @@ final class PoliPageBundle extends AbstractBundle
         $builder->setParameter('poli_page.retries.delay_seconds', $config['retries']['delay_seconds']);
         $builder->setParameter('poli_page.on_retry', $config['on_retry']);
         $builder->setParameter('poli_page.on_error', $config['on_error']);
+
+        if (null !== $config['http_client']) {
+            $builder->setAlias('poli_page.http_client', (string) $config['http_client']);
+        }
+        if (null !== $config['request_factory']) {
+            $builder->setAlias('poli_page.request_factory', (string) $config['request_factory']);
+        }
+        if (null !== $config['stream_factory']) {
+            $builder->setAlias('poli_page.stream_factory', (string) $config['stream_factory']);
+        }
+        if (null !== $config['logger']) {
+            $builder->setAlias('poli_page.logger', (string) $config['logger']);
+        }
     }
 }
