@@ -12,11 +12,17 @@ use Symfony\Component\HttpKernel\Kernel;
 
 final class TestKernel extends Kernel
 {
+    private readonly string $instanceId;
+
     /**
      * @param array<string, mixed> $poliPageConfig
      */
     public function __construct(private readonly array $poliPageConfig = ['api_key' => 'pp_test_dummy_for_kernel_boot'])
     {
+        // Why: spl_object_hash collides after GC across instances; use a
+        // unique id so each TestKernel instance compiles into its own
+        // cache directory, even if a previous instance was just shut down.
+        $this->instanceId = bin2hex(random_bytes(8));
         parent::__construct('test', false);
     }
 
@@ -41,11 +47,11 @@ final class TestKernel extends Kernel
 
     public function getCacheDir(): string
     {
-        return sys_get_temp_dir().'/poli_page_symfony_bundle/cache/'.spl_object_hash($this);
+        return sys_get_temp_dir().'/poli_page_symfony_bundle/cache/'.$this->instanceId;
     }
 
     public function getLogDir(): string
     {
-        return sys_get_temp_dir().'/poli_page_symfony_bundle/log/'.spl_object_hash($this);
+        return sys_get_temp_dir().'/poli_page_symfony_bundle/log/'.$this->instanceId;
     }
 }
