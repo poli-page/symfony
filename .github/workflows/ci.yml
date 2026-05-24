@@ -31,10 +31,19 @@ jobs:
           if [ -f composer.json ]; then
             composer config extra.symfony.require "${{ matrix.symfony }}"
           fi
-      - name: Install
+      - name: Install (two-step bootstrap for merge plugin)
         working-directory: symfony-bundle
         run: |
           if [ -f composer.json ]; then
+            # Why: wikimedia/composer-merge-plugin must be installed before it
+            # can merge composer.local.json (which provides the local path repo
+            # for poli-page/sdk). Bootstrap in two steps: strip the SDK require,
+            # install (plugin lands), restore composer.json, update with merged
+            # repos. Remove this whole block once poli-page/sdk publishes.
+            cp composer.json composer.json.bak
+            php -r '$j=json_decode(file_get_contents("composer.json"),true);unset($j["require"]["poli-page/sdk"]);file_put_contents("composer.json",json_encode($j,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES)."\n");'
+            composer install --prefer-dist --no-progress --no-scripts
+            mv composer.json.bak composer.json
             composer update --prefer-dist --no-progress
           else
             echo "Skipping install: no composer.json yet"
@@ -79,10 +88,15 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-      - working-directory: symfony-bundle
+      - name: Install (two-step bootstrap)
+        working-directory: symfony-bundle
         run: |
           if [ -f composer.json ]; then
-            composer update --prefer-dist
+            cp composer.json composer.json.bak
+            php -r '$j=json_decode(file_get_contents("composer.json"),true);unset($j["require"]["poli-page/sdk"]);file_put_contents("composer.json",json_encode($j,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES)."\n");'
+            composer install --prefer-dist --no-progress --no-scripts
+            mv composer.json.bak composer.json
+            composer update --prefer-dist --no-progress
           fi
       - name: Integration test against develop API
         working-directory: symfony-bundle
