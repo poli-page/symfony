@@ -103,5 +103,11 @@ final class PoliPageBundle extends AbstractBundle
         if (null !== $config['logger']) {
             $builder->setAlias('poli_page.logger', (string) $config['logger']);
         }
+        if (null !== $config['on_retry']) {
+            $builder->setAlias('poli_page.retry_listener', (string) $config['on_retry'])->setPublic(true);
+        }
+        if (null !== $config['on_error']) {
+            $builder->setAlias('poli_page.error_listener', (string) $config['on_error'])->setPublic(true);
+        }
     }
 }

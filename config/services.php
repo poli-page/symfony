@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PoliPage\PoliPage;
+use PoliPage\Symfony\EventListener\ErrorListener;
+use PoliPage\Symfony\EventListener\RetryListener;
 use PoliPage\Symfony\Http\PoliPageResponseFactory;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpClient\Psr18Client;
 
+use function Symfony\Component\DependencyInjection\Loader\Configurator\closure;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 
@@ -30,6 +33,16 @@ return static function (ContainerConfigurator $container): void {
     $services->alias('poli_page.stream_factory', 'poli_page.psr17_factory');
     $services->alias('poli_page.logger', 'logger');
 
+    // ─── Internal SDK-hook → Symfony-event bridge ────────────────────────────
+
+    $services->set('poli_page.retry_listener', RetryListener::class)
+        ->args([service('event_dispatcher')])
+        ->public();
+
+    $services->set('poli_page.error_listener', ErrorListener::class)
+        ->args([service('event_dispatcher')])
+        ->public();
+
     // ─── PoliPage client ─────────────────────────────────────────────────────
 
     $services->set('poli_page.client', PoliPage::class)
@@ -43,7 +56,8 @@ return static function (ContainerConfigurator $container): void {
             '$requestFactory' => service('poli_page.request_factory'),
             '$streamFactory' => service('poli_page.stream_factory'),
             '$logger' => service('poli_page.logger'),
-            // $onRetry / $onError wired in Task 7
+            '$onRetry' => closure(service('poli_page.retry_listener')),
+            '$onError' => closure(service('poli_page.error_listener')),
         ])
         ->public();
 

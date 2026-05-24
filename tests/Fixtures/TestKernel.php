@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PoliPage\Symfony\Tests\Fixtures;
 
 use PoliPage\Symfony\PoliPageBundle;
+use stdClass;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -15,10 +16,13 @@ final class TestKernel extends Kernel
     private readonly string $instanceId;
 
     /**
-     * @param array<string, mixed> $poliPageConfig
+     * @param array<string, mixed>             $poliPageConfig
+     * @param array<string, class-string|null> $extraServices  service id => class name, registered as public services
      */
-    public function __construct(private readonly array $poliPageConfig = ['api_key' => 'pp_test_dummy_for_kernel_boot'])
-    {
+    public function __construct(
+        private readonly array $poliPageConfig = ['api_key' => 'pp_test_dummy_for_kernel_boot'],
+        private readonly array $extraServices = [],
+    ) {
         // Why: spl_object_hash collides after GC across instances; use a
         // unique id so each TestKernel instance compiles into its own
         // cache directory, even if a previous instance was just shut down.
@@ -42,6 +46,10 @@ final class TestKernel extends Kernel
                 'php_errors' => ['log' => true],
             ]);
             $container->loadFromExtension('poli_page', $this->poliPageConfig);
+
+            foreach ($this->extraServices as $id => $class) {
+                $container->register($id, $class ?? stdClass::class)->setPublic(true);
+            }
         });
     }
 

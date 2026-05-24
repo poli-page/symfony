@@ -51,7 +51,10 @@ final class ConfigurationTest extends TestCase
             'on_retry' => 'app.retry_listener',
             'on_error' => 'app.error_listener',
         ];
-        $kernel = new TestKernel($input);
+        $kernel = new TestKernel($input, [
+            'app.retry_listener' => null,
+            'app.error_listener' => null,
+        ]);
         $kernel->boot();
         $c = $kernel->getContainer();
 
