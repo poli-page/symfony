@@ -1,5 +1,4 @@
 name: CI
-
 on:
   push:
   pull_request:
@@ -11,40 +10,87 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ['8.2', '8.3', '8.4']
+        php: ['8.3', '8.4']
+        symfony: ['6.4.*', '7.*']
     steps:
       - uses: actions/checkout@v4
-
+        with:
+          path: symfony-bundle
+      - uses: actions/checkout@v4
+        with:
+          repository: poli-page/sdk-php
+          path: sdk-php.md
+          ref: main
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php-version }}
+          php-version: ${{ matrix.php }}
           coverage: none
-          tools: composer:v2
-
-      - name: Install
+      - name: Pin Symfony version
+        working-directory: symfony-bundle
         run: |
           if [ -f composer.json ]; then
-            composer install --prefer-dist --no-progress --no-interaction
-          else
-            echo "No composer.json yet — skipping install"
+            composer config extra.symfony.require "${{ matrix.symfony }}"
           fi
-
+      - name: Install
+        working-directory: symfony-bundle
+        run: |
+          if [ -f composer.json ]; then
+            composer update --prefer-dist --no-progress
+          else
+            echo "Skipping install: no composer.json yet"
+          fi
       - name: Lint
+        working-directory: symfony-bundle
         run: |
-          if [ -x vendor/bin/php-cs-fixer ]; then
+          if [ -f .php-cs-fixer.dist.php ]; then
             vendor/bin/php-cs-fixer check --diff
-          elif [ -x vendor/bin/pint ]; then
-            vendor/bin/pint --test
           else
-            echo "No linter installed — skipping"
+            echo "Skipping lint: no .php-cs-fixer.dist.php yet"
+          fi
+      - name: Static analysis
+        working-directory: symfony-bundle
+        run: |
+          if [ -f phpstan.neon ]; then
+            vendor/bin/phpstan analyse
+          else
+            echo "Skipping phpstan: no phpstan.neon yet"
+          fi
+      - name: Unit tests
+        working-directory: symfony-bundle
+        run: |
+          if [ -d tests/Unit ] && [ -n "$(ls -A tests/Unit 2>/dev/null)" ]; then
+            vendor/bin/phpunit --testsuite=unit
+          else
+            echo "Skipping tests: no tests/Unit yet"
           fi
 
-      - name: Test
+  integration:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: symfony-bundle
+      - uses: actions/checkout@v4
+        with:
+          repository: poli-page/sdk-php
+          path: sdk-php.md
+          ref: main
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+      - working-directory: symfony-bundle
         run: |
-          if [ -x vendor/bin/phpunit ]; then
-            vendor/bin/phpunit
-          elif [ -x vendor/bin/pest ]; then
-            vendor/bin/pest
+          if [ -f composer.json ]; then
+            composer update --prefer-dist
+          fi
+      - name: Integration test against develop API
+        working-directory: symfony-bundle
+        env:
+          POLI_PAGE_API_KEY: ${{ secrets.POLI_PAGE_DEVELOP_API_KEY }}
+        run: |
+          if [ -d tests/Integration ] && [ -n "$(ls -A tests/Integration 2>/dev/null)" ]; then
+            vendor/bin/phpunit --testsuite=integration
           else
-            echo "No test runner installed — skipping"
+            echo "Skipping integration tests: no tests/Integration yet"
           fi
