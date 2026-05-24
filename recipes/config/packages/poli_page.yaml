@@ -1,0 +1,2 @@
+poli_page:
+    api_key: '%env(POLI_PAGE_API_KEY)%'
