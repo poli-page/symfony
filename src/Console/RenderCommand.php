@@ -31,7 +31,7 @@ final class RenderCommand extends Command
         $this
             ->addOption('project', null, InputOption::VALUE_REQUIRED, 'Project slug (required unless --html given)')
             ->addOption('template', null, InputOption::VALUE_REQUIRED, 'Template slug (or filename label if --html)')
-            ->addOption('version', null, InputOption::VALUE_REQUIRED, 'Template version (required unless --html)')
+            ->addOption('template-version', null, InputOption::VALUE_REQUIRED, 'Template version (required unless --html)')
             ->addOption('data', null, InputOption::VALUE_REQUIRED, 'Inline JSON for the data payload', '{}')
             ->addOption('data-file', null, InputOption::VALUE_REQUIRED, 'Read data payload from a file (or - for stdin)')
             ->addOption('html', null, InputOption::VALUE_REQUIRED, 'Inline-mode: render raw HTML from a file (preview only)')
@@ -74,10 +74,10 @@ final class RenderCommand extends Command
     {
         $project = (string) ($input->getOption('project') ?? '');
         $template = (string) ($input->getOption('template') ?? '');
-        $version = $input->getOption('version');
+        $version = $input->getOption('template-version');
 
         if ('' === $project || '' === $template || null === $version) {
-            $io->error('--project, --template and --version are required for PDF rendering.');
+            $io->error('--project, --template and --template-version are required for PDF rendering.');
 
             return Command::INVALID;
         }
@@ -117,9 +117,9 @@ final class RenderCommand extends Command
             $previewInput = new InlineModeInput(template: $html, data: $data);
         } else {
             $project = (string) ($input->getOption('project') ?? '');
-            $version = $input->getOption('version');
+            $version = $input->getOption('template-version');
             if ('' === $project || '' === $template || null === $version) {
-                $io->error('Either --html, or all of --project --template --version, are required for preview.');
+                $io->error('Either --html, or all of --project --template --template-version, are required for preview.');
 
                 return Command::INVALID;
             }

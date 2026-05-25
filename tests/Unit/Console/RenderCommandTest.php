@@ -62,7 +62,7 @@ final class RenderCommandTest extends TestCase
         $exitCode = $tester->execute([
             '--project' => 'invoices',
             '--template' => 'default',
-            '--version' => '1.0.0',
+            '--template-version' => '1.0.0',
             '--data' => '{"name":"Ada"}',
             '--output' => $this->outputPath,
         ]);
@@ -113,7 +113,7 @@ final class RenderCommandTest extends TestCase
         $exitCode = $tester->execute([
             '--project' => 'p',
             '--template' => 't',
-            '--version' => 'bad',
+            '--template-version' => 'bad',
             '--data' => '{}',
             '--output' => $this->outputPath,
         ]);
