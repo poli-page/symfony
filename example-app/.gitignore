@@ -4,3 +4,6 @@
 /var/
 /composer.lock
 /config/reference.php
+*.pdf
+*.html
+!templates/*.html
