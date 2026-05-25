@@ -99,7 +99,53 @@ When the SDK eventually publishes:
 
 **Bundle source code is untouched** by this transition — only the dev environment is.
 
-## 10. When stuck
+## 10. Known gotchas (battle-tested — don't relearn the hard way)
+
+These caught us once. Recorded so future agents don't burn a session rediscovering them.
+
+### 10.1 PHPUnit 11 handler-leak risky warnings
+
+`Symfony\Bundle\FrameworkBundle::boot()` registers a global error handler (driven by `handle_all_throwables: true` + `php_errors.log: true` in our `TestKernel`) and `Kernel::shutdown()` does **not** unregister it. PHPUnit 11.5+ flags any test that ends with a different handler stack as risky.
+
+**Fix in place**: `tests/RestoresGlobalHandlers.php` trait. Snapshots the handler stack in `setUp()` and unwinds back to baseline in `tearDown()`. Apply to any new test class that boots a kernel:
+
+```php
+final class MyKernelBootingTest extends TestCase
+{
+    use RestoresGlobalHandlers;
+    // ...
+}
+```
+
+**Trait/class `setUp()` collision**: if your test class overrides `setUp()`, the class's method wins and the trait's snapshot never runs. Either move setup logic into the test method, or use trait aliasing.
+
+**Do NOT** "fix" this by setting `failOnRisky="false"` in `phpunit.xml.dist` — that's the hack we explicitly rejected.
+
+### 10.2 `tests/bootstrap.php` loads the repo-root `.env`
+
+PHPUnit's `bootstrap=` points at `tests/bootstrap.php`, not `vendor/autoload.php`. It loads the repo-root `.env` via a hand-rolled parser so `POLI_PAGE_API_KEY` is available to integration tests without a shell export. Real env vars still win (12-factor).
+
+### 10.3 `example-app/bootstrap.php` must NOT require `vendor/autoload.php`
+
+Symfony Runtime's `vendor/autoload_runtime.php` decides "first call vs re-include" by whether `vendor/autoload.php` is already loaded:
+
+```php
+if (true === (require_once __DIR__.'/autoload.php') || empty($_SERVER['SCRIPT_FILENAME'])) {
+    return;
+}
+```
+
+If anything pre-loads `vendor/autoload.php`, the runtime skips itself on the first pass, the kernel never boots, and the entry script silently returns 200/empty. The example-app's `bootstrap.php` therefore parses `.env` by hand and never touches the autoloader. There's a `// Why:` comment in the file — preserve it.
+
+### 10.4 Symfony Console reserves `--version` / `-V` globally
+
+The bundle's `poli-page:render` originally defined `--version` and `Application::run()` threw "An option named 'version' already exists." on `--help`, while silently producing no output on a normal invocation. Renamed to `--template-version`. Same hazard for `--help`, `--quiet`, `--verbose`, `--no-interaction`, `--ansi`, `--no-ansi`, `--env` — pick non-reserved names.
+
+### 10.5 Example app env: one root `.env`, not per-app copies
+
+Both the integration test suite (`tests/bootstrap.php`) and the example app (`example-app/bootstrap.php`) read the bundle repo's root `.env`. Don't introduce per-app `.env.local` files — the user explicitly wanted a single source of truth.
+
+## 11. When stuck
 
 - Re-read `docs/spec/bundle-specification.md` first; most "open questions" are answered there.
 - Compare with the SDK reference at `/Users/mickael/Projects/sdk-php.md/`.

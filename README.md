@@ -85,7 +85,7 @@ final class InvoiceController
 bin/console poli-page:render \
     --project=getting-started \
     --template=welcome \
-    --version=1.0.0 \
+    --template-version=1.0.0 \
     --data='{"name":"World"}' \
     -o welcome.pdf
 ```
@@ -141,7 +141,7 @@ final class LogPoliPageRetries
 
 ## Try the example app
 
-A full runnable Symfony 7 app showing every public method of the SDK is in `example-app/`. See `example-app/README.md` for the walkthrough.
+A full runnable Symfony 7 app showing every public method of the SDK is in `example-app/`. Visit `http://127.0.0.1:8000/` after `composer serve` for an **interactive dashboard** — one button per SDK feature, inline PDF/HTML previews, no `curl` recipes to copy. See `example-app/README.md` for the full walkthrough.
 
 ## Errors
 
