@@ -8,10 +8,13 @@ use PHPUnit\Framework\TestCase;
 use PoliPage\PoliPage;
 use PoliPage\ProjectModeInput;
 use PoliPage\Symfony\Tests\Fixtures\TestKernel;
+use PoliPage\Symfony\Tests\RestoresGlobalHandlers;
 
 final class RenderAgainstDevelopApiTest extends TestCase
 {
-    protected function setUp(): void
+    use RestoresGlobalHandlers;
+
+    public function testRenderGettingStartedWelcomeTemplateReturnsPdf(): void
     {
         $key = getenv('POLI_PAGE_API_KEY');
         if (false === $key || '' === $key) {
@@ -20,12 +23,9 @@ final class RenderAgainstDevelopApiTest extends TestCase
         if (!str_starts_with($key, 'pp_test_')) {
             self::markTestSkipped('POLI_PAGE_API_KEY must be a pp_test_ key; refusing to run integration test against a live key.');
         }
-    }
 
-    public function testRenderGettingStartedWelcomeTemplateReturnsPdf(): void
-    {
         $kernel = new TestKernel([
-            'api_key' => (string) getenv('POLI_PAGE_API_KEY'),
+            'api_key' => $key,
             'base_url' => 'https://api-develop.poli.page',
             'timeout' => 30.0,
         ]);

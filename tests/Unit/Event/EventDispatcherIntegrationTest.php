@@ -13,10 +13,13 @@ use PoliPage\Symfony\Event\PoliPageRetryEvent;
 use PoliPage\Symfony\EventListener\ErrorListener;
 use PoliPage\Symfony\EventListener\RetryListener;
 use PoliPage\Symfony\Tests\Fixtures\TestKernel;
+use PoliPage\Symfony\Tests\RestoresGlobalHandlers;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 final class EventDispatcherIntegrationTest extends TestCase
 {
+    use RestoresGlobalHandlers;
+
     public function testRetryListenerDispatchesRetryEvent(): void
     {
         $kernel = new TestKernel(['api_key' => 'pp_test_evt']);

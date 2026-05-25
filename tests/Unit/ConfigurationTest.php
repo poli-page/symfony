@@ -7,6 +7,7 @@ namespace PoliPage\Symfony\Tests\Unit;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use PoliPage\Symfony\Tests\Fixtures\TestKernel;
+use PoliPage\Symfony\Tests\RestoresGlobalHandlers;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 
 /**
@@ -21,6 +22,8 @@ use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
  */
 final class ConfigurationTest extends TestCase
 {
+    use RestoresGlobalHandlers;
+
     public function testMinimalConfigOnlyApiKey(): void
     {
         $kernel = new TestKernel(['api_key' => 'pp_test_abc']);

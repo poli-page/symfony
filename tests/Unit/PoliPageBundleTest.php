@@ -7,10 +7,13 @@ namespace PoliPage\Symfony\Tests\Unit;
 use PHPUnit\Framework\TestCase;
 use PoliPage\PoliPage;
 use PoliPage\Symfony\Tests\Fixtures\TestKernel;
+use PoliPage\Symfony\Tests\RestoresGlobalHandlers;
 use ReflectionClass;
 
 final class PoliPageBundleTest extends TestCase
 {
+    use RestoresGlobalHandlers;
+
     public function testKernelBootsWithBundleRegistered(): void
     {
         $kernel = new TestKernel();
