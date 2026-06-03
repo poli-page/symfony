@@ -29,15 +29,14 @@ final class PoliPageExceptionSubscriber implements EventSubscriberInterface
             return;
         }
 
-        $status = $exception->status >= 400 ? $exception->status : 500;
+        $payload = $exception->toPayload();
+        $status = $payload['status'] ?? 500;
 
         $event->setResponse(new JsonResponse([
-            'error' => [
-                'code' => $exception->errorCode,
-                'message' => $exception->getMessage(),
-                'status' => $exception->status,
-                'requestId' => $exception->requestId,
-            ],
+            'code' => $payload['code'],
+            'message' => $payload['message'],
+            'status' => $status,
+            'requestId' => $payload['requestId'],
         ], $status));
     }
 }
