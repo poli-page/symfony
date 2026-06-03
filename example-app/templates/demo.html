@@ -110,6 +110,7 @@
   section:nth-of-type(2) { animation-delay: 0.12s; }
   section:nth-of-type(3) { animation-delay: 0.19s; }
   section:nth-of-type(4) { animation-delay: 0.26s; }
+  section:nth-of-type(5) { animation-delay: 0.33s; }
   @keyframes rise {
     from { opacity: 0; transform: translateY(10px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -444,7 +445,24 @@
 
   <section>
     <div class="head">
-      <h2>Error handling <span class="label">03 · typed exceptions</span></h2>
+      <h2>Filesystem <span class="label">03 · render to disk</span></h2>
+      <p class="desc">
+        <code>PoliPage\renderToFile()</code> streams the PDF straight to disk under
+        <code>example-app/var/poli-page/welcome.pdf</code> — memory-bounded regardless of size.
+      </p>
+    </div>
+    <div class="actions">
+      <button class="run" data-action="render-file" data-target="r3">Render to file</button>
+    </div>
+    <div class="result" id="r3">
+      <div class="pane-label"><span>output</span><span class="meta">idle</span></div>
+      <div class="empty">Press the button to stream a PDF to disk.</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <h2>Error handling <span class="label">04 · typed exceptions</span></h2>
       <p class="desc">
         Sends a deliberately malformed version string to trigger
         <code>INVALID_VERSION_FORMAT</code>. The bundle's typed exceptions propagate the
@@ -452,9 +470,9 @@
       </p>
     </div>
     <div class="actions">
-      <button class="run" data-action="bad-version" data-target="r3">Trigger 400</button>
+      <button class="run" data-action="bad-version" data-target="r4">Trigger 400</button>
     </div>
-    <div class="result" id="r3">
+    <div class="result" id="r4">
       <div class="pane-label"><span>output</span><span class="meta">idle</span></div>
       <div class="empty">Press the button to see the error payload.</div>
     </div>
@@ -462,7 +480,7 @@
 
   <section>
     <div class="head">
-      <h2>Command line <span class="label">04 · console</span></h2>
+      <h2>Command line <span class="label">05 · CLI</span></h2>
       <p class="desc">
         These two commands prove the bundle wires through to Symfony Console.
         Copy and run in a terminal alongside this server.
@@ -572,10 +590,11 @@
     },
     'doc-get': async target => {
       if (!state.docId) return;
-      const r = await fetch(`/documents/${state.docId}`, { redirect: 'follow' });
-      if (!r.ok) return renderError(target, `HTTP ${r.status}`);
-      const blob = await r.blob();
-      renderIframe(target, URL.createObjectURL(blob), 'stored pdf', `${blob.size.toLocaleString()} bytes`);
+      // Why: /documents/{id} returns a 302 to a presigned S3 URL. Fetching
+      // and following the redirect from JS hits CORS (S3 doesn't expose
+      // Access-Control-Allow-Origin). An <iframe> navigation isn't a fetch,
+      // so the browser follows the redirect natively without CORS.
+      renderIframe(target, `/documents/${state.docId}`, 'stored pdf', 'served via 302 → presigned S3 URL');
     },
     'doc-preview': async target => {
       if (!state.docId) return;
@@ -596,6 +615,11 @@
       const body = await r.text();
       renderJson(target, r.status, body || '"(204 No Content)"', 'delete');
       if (r.ok) setDocId(null);
+    },
+    'render-file': async target => {
+      const r = await fetch('/render/file', { method: 'POST' });
+      const body = await r.text();
+      renderJson(target, r.status, body, 'wrote to disk');
     },
     'bad-version': async target => {
       const r = await fetch('/errors/bad-version');

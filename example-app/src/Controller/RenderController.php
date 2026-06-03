@@ -8,16 +8,21 @@ use PoliPage\InlineModeInput;
 use PoliPage\PoliPage;
 use PoliPage\ProjectModeInput;
 use PoliPage\Symfony\Http\PoliPageResponseFactory;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+
+use function PoliPage\renderToFile;
 
 final class RenderController
 {
     public function __construct(
         private readonly PoliPage $poliPage,
         private readonly PoliPageResponseFactory $factory,
+        #[Autowire('%kernel.project_dir%')]
+        private readonly string $projectDir,
     ) {
     }
 
@@ -73,6 +78,30 @@ final class RenderController
         $result = $this->poliPage->render->preview($input);
 
         return $this->factory->preview($result);
+    }
+
+    /**
+     * Demo step 3: renderToFile() — stream the PDF straight to disk, memory-bounded.
+     */
+    #[Route('/render/file', name: 'render_file', methods: ['POST'])]
+    public function renderFile(): JsonResponse
+    {
+        $output = $this->projectDir.'/var/poli-page/welcome.pdf';
+        if (!is_dir(\dirname($output))) {
+            mkdir(\dirname($output), 0o775, true);
+        }
+
+        renderToFile($this->poliPage, new ProjectModeInput(
+            project: 'getting-started',
+            template: 'welcome',
+            data: ['name' => 'renderToFile demo'],
+            version: '1.0.0',
+        ), $output);
+
+        return new JsonResponse([
+            'path' => $output,
+            'sizeBytes' => filesize($output) ?: 0,
+        ]);
     }
 
     /**
