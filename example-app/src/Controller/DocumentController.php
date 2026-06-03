@@ -88,13 +88,15 @@ final class DocumentController
                 version: 'not-semver',
             ));
         } catch (PoliPageException $e) {
+            $payload = $e->toPayload();
+            $status = $payload['status'] ?? 500;
             return new JsonResponse([
                 'caught' => true,
-                'status' => $e->status,
-                'code' => $e->errorCode,
-                'message' => $e->getMessage(),
-                'requestId' => $e->requestId,
-            ], 400);
+                'code' => $payload['code'],
+                'message' => $payload['message'],
+                'status' => $status,
+                'requestId' => $payload['requestId'],
+            ], $status);
         }
 
         return new JsonResponse(['caught' => false, 'note' => 'expected an exception, got success'], 500);
