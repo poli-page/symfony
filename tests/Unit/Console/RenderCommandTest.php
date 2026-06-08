@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PoliPage\Symfony\Tests\Unit\Console;
 
+use Composer\Autoload\ClassLoader;
 use DG\BypassFinals;
 use PHPUnit\Framework\TestCase;
 use PoliPage\PoliPage;
@@ -23,11 +24,39 @@ final class RenderCommandTest extends TestCase
     {
         // Why: PoliPage\Render is final; PHPUnit can't mock it directly.
         // BypassFinals strips the final modifier from classes at load time
-        // so createMock(Render::class) works. Whitelisted to SDK files only
-        // — stripping final from PHPUnit's own classes breaks readonly
-        // class inheritance constraints.
+        // so createMock(Render::class) works. The whitelist must stay
+        // scoped to SDK files — stripping final from PHPUnit's own classes
+        // breaks readonly inheritance constraints. We resolve the SDK's
+        // actual source directory at runtime via Composer's autoloader so
+        // the whitelist works regardless of install layout (sibling-dir
+        // symlink for local dev, plain vendor/ install in CI/Docker).
+        // ClassLoader::findFile() returns the path without triggering
+        // autoload, which is required: loading Render before BypassFinals
+        // is enabled would freeze `final` in memory.
         BypassFinals::enable();
-        BypassFinals::setWhitelist(['*/sdk-php.md/src/*']);
+        BypassFinals::setWhitelist(self::resolveSdkWhitelist());
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function resolveSdkWhitelist(): array
+    {
+        $patterns = [];
+        foreach (ClassLoader::getRegisteredLoaders() as $loader) {
+            $file = $loader->findFile(Render::class);
+            if (false === $file) {
+                continue;
+            }
+            $patterns[] = \dirname($file).'/*';
+            $real = realpath($file);
+            if (false !== $real) {
+                $patterns[] = \dirname($real).'/*';
+            }
+            break;
+        }
+
+        return array_values(array_unique($patterns));
     }
 
     protected function setUp(): void
