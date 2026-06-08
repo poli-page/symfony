@@ -6,6 +6,7 @@ namespace PoliPage\Symfony\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use PoliPage\PoliPage;
+use PoliPage\Symfony\EventListener\PoliPageExceptionListener;
 use PoliPage\Symfony\Tests\Fixtures\TestKernel;
 use PoliPage\Symfony\Tests\RestoresGlobalHandlers;
 use ReflectionClass;
@@ -13,6 +14,34 @@ use ReflectionClass;
 final class PoliPageBundleTest extends TestCase
 {
     use RestoresGlobalHandlers;
+
+    public function testExceptionListenerIsNotRegisteredByDefault(): void
+    {
+        $kernel = new TestKernel(['api_key' => 'pp_test_x']);
+        $kernel->boot();
+
+        self::assertFalse($kernel->getContainer()->has('poli_page.exception_listener'));
+
+        $kernel->shutdown();
+    }
+
+    public function testExceptionListenerOptInRegistersService(): void
+    {
+        $kernel = new TestKernel([
+            'api_key' => 'pp_test_x',
+            'exception_listener' => ['enabled' => true],
+        ]);
+        $kernel->boot();
+
+        $container = $kernel->getContainer();
+        self::assertTrue($container->has('poli_page.exception_listener'));
+        self::assertInstanceOf(
+            PoliPageExceptionListener::class,
+            $container->get('poli_page.exception_listener'),
+        );
+
+        $kernel->shutdown();
+    }
 
     public function testKernelBootsWithBundleRegistered(): void
     {

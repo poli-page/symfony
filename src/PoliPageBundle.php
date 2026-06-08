@@ -83,6 +83,12 @@ final class PoliPageBundle extends AbstractBundle
                 ->scalarNode('logger')->defaultNull()->end()
                 ->scalarNode('on_retry')->defaultNull()->end()
                 ->scalarNode('on_error')->defaultNull()->end()
+                ->arrayNode('exception_listener')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->booleanNode('enabled')->defaultFalse()->end()
+                    ->end()
+                ->end()
             ->end();
     }
 
@@ -119,6 +125,13 @@ final class PoliPageBundle extends AbstractBundle
         }
         if (null !== $config['on_error']) {
             $builder->setAlias('poli_page.error_listener', (string) $config['on_error'])->setPublic(true);
+        }
+
+        if (true === ($config['exception_listener']['enabled'] ?? false)) {
+            $builder
+                ->register('poli_page.exception_listener', EventListener\PoliPageExceptionListener::class)
+                ->addTag('kernel.event_subscriber')
+                ->setPublic(true);
         }
     }
 }

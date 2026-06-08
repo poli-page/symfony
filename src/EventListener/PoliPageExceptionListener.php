@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\EventSubscriber;
+namespace PoliPage\Symfony\EventListener;
 
 use PoliPage\PoliPageException;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -11,11 +11,14 @@ use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 
 /**
- * Why: surface SDK errors as their underlying HTTP status (e.g. 404 for a
- * missing document) instead of Symfony's default 500. Mirrors the global
- * error mapping shipped by the Next.js / NestJS / FastAPI demos.
+ * Translates PoliPageException thrown in controllers into a JSON response
+ * carrying the SDK's canonical error payload and the underlying HTTP
+ * status (e.g. 404 for a missing document, 403 for a paid-feature gate).
+ * Mirrors the global error mapping shipped by the NestJS / Laravel /
+ * Next.js / FastAPI demos so all framework integrations expose the same
+ * wire shape on errors. Opt-in via `poli_page.exception_listener.enabled`.
  */
-final class PoliPageExceptionSubscriber implements EventSubscriberInterface
+final class PoliPageExceptionListener implements EventSubscriberInterface
 {
     public static function getSubscribedEvents(): array
     {
@@ -32,11 +35,14 @@ final class PoliPageExceptionSubscriber implements EventSubscriberInterface
         $payload = $exception->toPayload();
         $status = $payload['status'] ?? 500;
 
-        $event->setResponse(new JsonResponse([
+        $response = new JsonResponse([
             'code' => $payload['code'],
             'message' => $payload['message'],
             'status' => $status,
             'requestId' => $payload['requestId'],
-        ], $status));
+        ], $status);
+        $response->headers->set('Cache-Control', 'no-store, private');
+
+        $event->setResponse($response);
     }
 }
