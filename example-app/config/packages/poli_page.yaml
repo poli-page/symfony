@@ -1,5 +1,4 @@
 poli_page:
     api_key: '%env(POLI_PAGE_API_KEY)%'
-    base_url: 'https://api-develop.poli.page'  # remove for production
     exception_listener:
         enabled: true  # map PoliPageException -> {code,message,status,requestId} JSON

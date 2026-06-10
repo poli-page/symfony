@@ -18,17 +18,18 @@ final class RenderAgainstDevelopApiTest extends TestCase
     {
         $key = getenv('POLI_PAGE_API_KEY');
         if (false === $key || '' === $key) {
-            self::markTestSkipped('POLI_PAGE_API_KEY not set; skipping develop-API integration test.');
+            self::markTestSkipped('POLI_PAGE_API_KEY not set; skipping integration test.');
         }
         if (!str_starts_with($key, 'pp_test_')) {
             self::markTestSkipped('POLI_PAGE_API_KEY must be a pp_test_ key; refusing to run integration test against a live key.');
         }
 
-        $kernel = new TestKernel([
-            'api_key' => $key,
-            'base_url' => 'https://api-develop.poli.page',
-            'timeout' => 30.0,
-        ]);
+        $config = ['api_key' => $key, 'timeout' => 30.0];
+        $testBaseUrl = getenv('POLI_PAGE_TEST_BASE_URL');
+        if (is_string($testBaseUrl) && '' !== $testBaseUrl) {
+            $config['base_url'] = $testBaseUrl;
+        }
+        $kernel = new TestKernel($config);
         $kernel->boot();
 
         $client = $kernel->getContainer()->get(PoliPage::class);

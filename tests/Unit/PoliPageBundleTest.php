@@ -75,7 +75,7 @@ final class PoliPageBundleTest extends TestCase
     {
         $kernel = new TestKernel([
             'api_key' => 'pp_test_custom',
-            'base_url' => 'https://api-develop.poli.page',
+            'base_url' => 'https://api.example.com',
             'timeout' => 42.0,
             'retries' => ['max_attempts' => 5, 'delay_seconds' => 0.1],
         ]);
@@ -86,7 +86,7 @@ final class PoliPageBundleTest extends TestCase
 
         $reflection = new ReflectionClass($client);
         self::assertSame('pp_test_custom', $reflection->getProperty('apiKey')->getValue($client));
-        self::assertSame('https://api-develop.poli.page', $reflection->getProperty('baseUrl')->getValue($client));
+        self::assertSame('https://api.example.com', $reflection->getProperty('baseUrl')->getValue($client));
         self::assertSame(42.0, $reflection->getProperty('defaultTimeout')->getValue($client));
         self::assertSame(5, $reflection->getProperty('maxRetries')->getValue($client));
         self::assertSame(0.1, $reflection->getProperty('retryDelay')->getValue($client));

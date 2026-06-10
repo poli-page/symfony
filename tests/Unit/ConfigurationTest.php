@@ -46,7 +46,7 @@ final class ConfigurationTest extends TestCase
     {
         $input = [
             'api_key' => 'pp_live_full',
-            'base_url' => 'https://api-develop.poli.page',
+            'base_url' => 'https://api.example.com',
             'timeout' => 45.0,
             'user_agent' => 'my-app/1.0',
             'retries' => ['max_attempts' => 5, 'delay_seconds' => 0.1],
@@ -62,7 +62,7 @@ final class ConfigurationTest extends TestCase
         $c = $kernel->getContainer();
 
         self::assertSame('pp_live_full', $c->getParameter('poli_page.api_key'));
-        self::assertSame('https://api-develop.poli.page', $c->getParameter('poli_page.base_url'));
+        self::assertSame('https://api.example.com', $c->getParameter('poli_page.base_url'));
         self::assertSame(45.0, $c->getParameter('poli_page.timeout'));
         self::assertSame('my-app/1.0', $c->getParameter('poli_page.user_agent'));
         self::assertSame(5, $c->getParameter('poli_page.retries.max_attempts'));
