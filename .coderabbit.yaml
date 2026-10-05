@@ -1,0 +1,86 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit config for poli-page repos. PRs here are mostly opened and fixed by automated agents
+# (the poli-page auto loop and issue pipeline), which read CodeRabbit's findings and its commit status.
+language: en-US
+early_access: false
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  allow_author_approval: true
+  # The summary goes in the walkthrough, never in the PR description: the merge gate reads the description.
+  high_level_summary: false
+  high_level_summary_in_walkthrough: true
+  review_status: true
+  review_details: false
+  # The loop decides "reviewed this head" from the CodeRabbit commit status ("Review completed").
+  review_progress: true
+  commit_status: true
+  fail_commit_status: false
+  collapse_walkthrough: true
+  changed_files_summary: true
+  sequence_diagrams: true
+  estimate_code_review_effort: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  suggested_labels: true
+  # PR labels are the closed issues' labels; CodeRabbit only suggests.
+  auto_apply_labels: false
+  suggested_reviewers: true
+  auto_assign_reviewers: false
+  in_progress_fortune: false
+  poem: false
+  enable_prompt_for_ai_agents: true
+  abort_on_close: true
+  disable_cache: false
+  slop_detection:
+    enabled: true
+    include_all_authors: false
+  auto_review:
+    enabled: true
+    drafts: false
+    # Every push of a fix round must be reviewed, and never auto-paused (the loop allows up to 5 rounds).
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 0
+  pre_merge_checks:
+    docstrings:
+      mode: "off"
+  path_filters:
+    - "!**/vendor/**"
+    - "!**/composer.lock"
+    - "!**/var/**"
+    - "!**/.phpunit.cache/**"
+    - "!**/.php-cs-fixer.cache"
+    - "!**/.phpstan.cache/**"
+    - "!**/config/reference.php"
+  path_instructions:
+    - path: "src/**/*.php"
+      instructions: >-
+        This is a Symfony bundle wrapping the poli-page PHP SDK. Keep it idiomatic Symfony
+        (AbstractBundle, autowiring, EventDispatcher) and declare(strict_types=1). Transport, retry
+        and error mapping belong in the SDK, not here. Errors surfaced to clients must keep the SDK's
+        canonical payload (code, message, status). Flag breaking changes to the public API or config
+        tree without a major version bump and a CHANGELOG.md entry.
+    - path: "config/**"
+      instructions: >-
+        Service wiring and config tree must stay in sync with every PoliPage constructor option and
+        with README.md and recipes/config/packages/poli_page.yaml. The API key comes from an env var
+        (POLI_PAGE_API_KEY), never a literal value.
+    - path: "example-app/**"
+      instructions: >-
+        Sample code that customers copy: it must be correct, idiomatic Symfony and secure. No
+        secrets or hardcoded API keys (use env vars), sensible error handling, and behavior that
+        matches the README.
+    - path: "tests/**/*.php"
+      instructions: >-
+        Every public bundle behavior (config, listeners, response factory, console command) needs a
+        PHPUnit test. Kernel-booting tests must use the RestoresGlobalHandlers trait. Integration
+        tests must read the API key from the environment and never hardcode it.
+    - path: "README.md"
+      instructions: >-
+        Install steps, config keys, option names (e.g. --template-version) and code samples must
+        match the actual code.
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns: []      # per repo
