@@ -19,6 +19,7 @@ All notable changes to `poli-page/symfony-bundle` are documented here. Format fo
 ### Fixed
 - 8 PHPUnit "risky" warnings caused by Symfony's `FrameworkBundle::boot()` leaking a global error handler past test boundaries.
 - `composer install` in `example-app/` no longer errors with "non-existent script @auto-scripts" on PHP 8.5+.
+- `PoliPageResponseFactory::bytes()` / `stream()`: control characters (CR/LF, TAB, DEL, C1) are now stripped from the `Content-Disposition` filename instead of surviving as `?` in the fallback and `%0D%0A` in `filename*`. Filenames containing `/`, `\` or `%` no longer throw `InvalidArgumentException` from `HeaderUtils::makeDisposition()` (a 500): path separators become `_`, and `%` becomes `?` in the ASCII fallback only. The fallback now has one `?` per non-ASCII character (was one per UTF-8 byte), and a filename made only of control characters falls back to `document.pdf`.
 
 ## [0.1.0] — TBD
 

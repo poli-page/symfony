@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PoliPage\Symfony\Tests\Unit\Http;
 
 use Nyholm\Psr7\Factory\Psr17Factory;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use PoliPage\DocumentDescriptor;
 use PoliPage\DocumentPreviewResult;
@@ -53,6 +54,53 @@ final class PoliPageResponseFactoryTest extends TestCase
         $disposition = (string) $response->headers->get('Content-Disposition');
         self::assertStringContainsString('filename=', $disposition);
         self::assertStringContainsString("filename*=utf-8''", $disposition);
+    }
+
+    /**
+     * Same cases as poli-page/django#1. Quoting and `"`/`\` escaping are HeaderUtils's job;
+     * HeaderUtils forbids `/` and `\` (path separators) and `%` in the fallback, so those
+     * are replaced instead of making the response throw.
+     *
+     * @return iterable<string, array{string, string}>
+     */
+    public static function contentDispositionCases(): iterable
+    {
+        yield 'double-quote-is-escaped' => ['say "hi".pdf', 'attachment; filename="say \"hi\".pdf"'];
+        yield 'backslash-is-replaced-instead-of-throwing' => ['a\b.pdf', 'attachment; filename=a_b.pdf'];
+        yield 'crlf-is-stripped' => ["evil.pdf\r\nSet-Cookie: sid=1", 'attachment; filename="evil.pdfSet-Cookie: sid=1"'];
+        yield 'control-chars-are-stripped' => ["tab\there\x00\x1f\x7f.pdf", 'attachment; filename=tabhere.pdf'];
+        yield 'parameter-injection-stays-inside-the-quoted-string' => [
+            'x.pdf"; filename="pwn.exe',
+            'attachment; filename="x.pdf\"; filename=\"pwn.exe"',
+        ];
+        yield 'non-ascii-uses-rfc5987-dual-notation' => [
+            'résumé François.pdf',
+            "attachment; filename=\"r?sum? Fran?ois.pdf\"; filename*=utf-8''r%C3%A9sum%C3%A9%20Fran%C3%A7ois.pdf",
+        ];
+        yield 'non-ascii-fallback-is-escaped' => [
+            'résumé "final"\v2.pdf',
+            "attachment; filename=\"r?sum? \\\"final\\\"_v2.pdf\"; filename*=utf-8''r%C3%A9sum%C3%A9%20%22final%22_v2.pdf",
+        ];
+        yield 'non-ascii-control-chars-are-stripped-from-both-forms' => [
+            "résumé\r\n\u{85}.pdf",
+            "attachment; filename=\"r?sum?.pdf\"; filename*=utf-8''r%C3%A9sum%C3%A9.pdf",
+        ];
+        yield 'percent-sign-does-not-throw' => ['100%.pdf', "attachment; filename=\"100?.pdf\"; filename*=utf-8''100%25.pdf"];
+        yield 'slash-is-replaced-instead-of-throwing' => ['Q1/Q2.pdf', 'attachment; filename=Q1_Q2.pdf'];
+        yield 'only-control-chars-falls-back-to-default' => ["\r\n\t", 'attachment; filename=document.pdf'];
+    }
+
+    #[DataProvider('contentDispositionCases')]
+    public function testBytesContentDispositionIsRfc6266Safe(string $filename, string $expected): void
+    {
+        $response = $this->factory->bytes('%PDF-1.7', $filename);
+        self::assertSame($expected, $response->headers->get('Content-Disposition'));
+    }
+
+    public function testStreamContentDispositionIsEscapedAndStripped(): void
+    {
+        $response = $this->factory->stream($this->psr17->createStream('x'), "q\"\r\n.pdf", inline: true);
+        self::assertSame('inline; filename="q\".pdf"', $response->headers->get('Content-Disposition'));
     }
 
     public function testStreamReturnsStreamedResponse(): void
