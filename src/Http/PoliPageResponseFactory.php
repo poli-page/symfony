@@ -66,10 +66,19 @@ final class PoliPageResponseFactory
     private function disposition(string $filename, bool $inline): string
     {
         $type = $inline ? HeaderUtils::DISPOSITION_INLINE : HeaderUtils::DISPOSITION_ATTACHMENT;
-        // Why: HeaderUtils requires an ASCII fallback as the 2nd arg; transliterate
-        // non-ASCII chars to '?' so the fallback is safe for legacy clients.
-        $fallback = preg_replace('/[^\x20-\x7e]/', '?', $filename) ?? 'document.pdf';
+        // Why: control characters (C0 incl. TAB/CR/LF, DEL, C1) never belong in a filename;
+        // HeaderUtils would keep them as %0D%0A in filename*, which clients decode back.
+        $clean = (string) preg_replace('/[\x{0}-\x{1F}\x{7F}-\x{9F}]/u', '', mb_scrub($filename, 'UTF-8'));
+        // Why: HeaderUtils rejects path separators in both forms (it throws); browsers replace
+        // them with '_' when saving anyway.
+        $clean = strtr($clean, ['/' => '_', '\\' => '_']);
+        if ('' === $clean) {
+            $clean = 'document.pdf';
+        }
+        // Why: the ASCII fallback must be printable ASCII without '%' (HeaderUtils throws on
+        // it); every other character becomes one '?'. Quoting and escaping are HeaderUtils's job.
+        $fallback = (string) preg_replace('/[^\x20-\x24\x26-\x7e]/u', '?', $clean);
 
-        return HeaderUtils::makeDisposition($type, $filename, $fallback);
+        return HeaderUtils::makeDisposition($type, $clean, $fallback);
     }
 }
