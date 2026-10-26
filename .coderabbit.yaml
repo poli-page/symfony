@@ -78,7 +78,7 @@ reviews:
         tests must read the API key from the environment and never hardcode it.
     - path: "README.md"
       instructions: >-
-        Install steps, config keys, option names (e.g. --data-file) and code samples must
+        Install steps, config keys, option names (e.g. --template-version) and code samples must
         match the actual code.
 knowledge_base:
   code_guidelines:
