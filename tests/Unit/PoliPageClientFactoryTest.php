@@ -90,6 +90,23 @@ final class PoliPageClientFactoryTest extends TestCase
         self::assertStringNotContainsString('sk-', $logs[0][1]);
     }
 
+    public function testWarningShowsNoPrefixForA21CharacterEnvironment(): void
+    {
+        [, $logs] = $this->buildClient('pp_'.str_repeat('a', 21).'_'.self::SECRET);
+
+        self::assertCount(1, $logs);
+        self::assertStringNotContainsString('pp_'.str_repeat('a', 21), $logs[0][1]);
+        self::assertStringStartsWith('Poli Page API key does not look like', $logs[0][1]);
+    }
+
+    public function testWarningShowsThePrefixOfA20CharacterEnvironment(): void
+    {
+        [, $logs] = $this->buildClient('pp_'.str_repeat('a', 20).'_x');
+
+        self::assertCount(1, $logs);
+        self::assertStringContainsString('"pp_'.str_repeat('a', 20).'_…"', $logs[0][1]);
+    }
+
     public function testEnvPlaceholderKeyIsResolvedAndChecked(): void
     {
         $key = 'pp_sandbox_'.self::SECRET;
