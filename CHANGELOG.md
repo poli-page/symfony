@@ -12,9 +12,19 @@ All notable changes to `poli-page/symfony-bundle` are documented here. Format fo
 - `example-app/bootstrap.php` — loads the repo-root `.env` before Symfony Runtime starts, so the example app uses the same key as the test suite. Deliberately does not require `vendor/autoload.php` (see CLAUDE.md §10.3).
 
 ### Changed
-- **Renamed `poli-page:render` option `--version` to `--template-version`** to avoid collision with Symfony Console's global `--version` / `-V`. Old name silently produced no output. (CLAUDE.md §10.4)
+- **Environment keys.** An API key is `pp_{environment}_{32 hex}` (`pp_sandbox_…`, `pp_live_…`, `pp_staging_…`). The `api_key` config node no longer checks the key's format, so keys for any environment boot. When the client is built, a key that does not match the SDK contract's full-key pattern logs one warning through `poli_page.logger` (showing at most the `pp_{environment}_` prefix, never the secret); the API stays the only authority on keys. An empty key is still refused by the SDK.
+- **Template versions are gone.** Renders use the project's copy published in the key's environment: `poli-page:render`, the example app, the README and the integration test build a `RenderInput` with no `version`.
+- `PoliPageResponseFactory::preview()` takes a `DocumentPreviewResult` only (the stored HTML of a rendered document).
+- The Flex recipe seeds `POLI_PAGE_API_KEY=pp_sandbox_replace_me`.
+- The integration test runs only with a `pp_sandbox_…` key (renders in other environments count toward the monthly quota).
+- Example app: `GET /errors/bad-version` is replaced by `GET /errors/not-found`, which renders `getting-started` / `does-not-exist` and answers `404` with code `TEMPLATE_NOT_FOUND`; the demo steps follow the SDK demo's numbering.
+- `poli-page/sdk` now resolves from the SDK's environments change (`dev-main` at `7e16f75`, through a VCS repository in `composer.local.json`) until the next SDK release; `composer.local.json` no longer pins a local path to `0.1.0`.
 - `example-app/composer.json`: removed dead Symfony Flex `auto-scripts` hooks. Composer no longer warns on `composer install`.
-- `example-app/.env`: removed placeholder `POLI_PAGE_API_KEY=pp_test_replace_me_with_real_key`. Value now comes from the repo-root `.env` via `example-app/bootstrap.php`. A comment in the file explains the override hierarchy.
+- `example-app/.env`: removed the placeholder `POLI_PAGE_API_KEY` value. Value now comes from the repo-root `.env` via `example-app/bootstrap.php`. A comment in the file explains the override hierarchy.
+
+### Removed
+- `poli-page:render` options `--template-version`, `--preview` and `--html` (HTML preview and inline-HTML rendering are gone from the API).
+- Example app: `GET /render/preview` and its dashboard button. `GET /documents/{id}/preview` stays.
 
 ### Fixed
 - 8 PHPUnit "risky" warnings caused by Symfony's `FrameworkBundle::boot()` leaking a global error handler past test boundaries.

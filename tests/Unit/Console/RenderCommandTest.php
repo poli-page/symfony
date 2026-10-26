@@ -6,11 +6,12 @@ namespace PoliPage\Symfony\Tests\Unit\Console;
 
 use Composer\Autoload\ClassLoader;
 use DG\BypassFinals;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use PoliPage\PoliPage;
 use PoliPage\PoliPageException;
-use PoliPage\PreviewResult;
 use PoliPage\Render;
+use PoliPage\RenderInput;
 use PoliPage\Symfony\Console\RenderCommand;
 use ReflectionClass;
 use Symfony\Component\Console\Command\Command;
@@ -71,15 +72,14 @@ final class RenderCommandTest extends TestCase
         }
     }
 
-    public function testProjectModeWritesPdfBytes(): void
+    public function testRendersPdfBytesFromProjectAndTemplate(): void
     {
         $render = $this->createMock(Render::class);
         $render->expects($this->once())
             ->method('pdf')
-            ->willReturnCallback(static function ($input): string {
+            ->willReturnCallback(static function (RenderInput $input): string {
                 self::assertSame('invoices', $input->project);
                 self::assertSame('default', $input->template);
-                self::assertSame('1.0.0', $input->version);
                 self::assertSame(['name' => 'Ada'], $input->data);
 
                 return "%PDF-1.7\nstub\n%%EOF\n";
@@ -91,7 +91,6 @@ final class RenderCommandTest extends TestCase
         $exitCode = $tester->execute([
             '--project' => 'invoices',
             '--template' => 'default',
-            '--template-version' => '1.0.0',
             '--data' => '{"name":"Ada"}',
             '--output' => $this->outputPath,
         ]);
@@ -102,53 +101,67 @@ final class RenderCommandTest extends TestCase
         self::assertStringContainsString('Rendered', $tester->getDisplay());
     }
 
-    public function testInlineHtmlModeForPreview(): void
+    /**
+     * @return iterable<string, array{0: array<string, string>}>
+     */
+    public static function missingSlugProvider(): iterable
+    {
+        yield 'no project' => [['--template' => 'welcome']];
+        yield 'no template' => [['--project' => 'getting-started']];
+    }
+
+    /**
+     * @param array<string, string> $options
+     */
+    #[DataProvider('missingSlugProvider')]
+    public function testProjectAndTemplateAreRequired(array $options): void
     {
         $render = $this->createMock(Render::class);
-        $render->expects($this->once())
-            ->method('preview')
-            ->willReturnCallback(static function ($input): PreviewResult {
-                self::assertSame('<h1>Hi</h1>', $input->template);
+        $render->expects($this->never())->method('pdf');
 
-                return new PreviewResult('<html><h1>Hi</h1></html>', 1, 'sandbox');
-            });
+        $tester = new CommandTester(new RenderCommand($this->stubClient($render)));
+        $exitCode = $tester->execute($options + ['--output' => $this->outputPath]);
 
-        $client = $this->stubClient($render);
+        self::assertSame(Command::INVALID, $exitCode);
+        self::assertStringContainsString('--project and --template are required', $tester->getDisplay());
+        self::assertFileDoesNotExist($this->outputPath);
+    }
 
-        $outputHtml = (string) preg_replace('/\.pdf$/', '.html', $this->outputPath);
-        $tester = new CommandTester(new RenderCommand($client));
-        $exitCode = $tester->execute([
-            '--html' => $this->writeTempHtml('<h1>Hi</h1>'),
-            '--template' => 'inline',
-            '--preview' => true,
-            '--output' => $outputHtml,
-        ]);
+    /**
+     * @return iterable<string, array{0: string}>
+     */
+    public static function removedOptionProvider(): iterable
+    {
+        yield 'template version' => ['template-version'];
+        yield 'preview' => ['preview'];
+        yield 'inline html' => ['html'];
+    }
 
-        self::assertSame(Command::SUCCESS, $exitCode);
-        self::assertFileExists($outputHtml);
-        self::assertStringContainsString('<h1>Hi</h1>', (string) file_get_contents($outputHtml));
-        unlink($outputHtml);
+    #[DataProvider('removedOptionProvider')]
+    public function testRemovedOptionsNoLongerExist(string $option): void
+    {
+        $command = new RenderCommand($this->stubClient($this->createMock(Render::class)));
+
+        self::assertFalse($command->getDefinition()->hasOption($option));
     }
 
     public function testPoliPageExceptionExitsWithMappedCode(): void
     {
         $render = $this->createMock(Render::class);
         $render->method('pdf')->willThrowException(
-            new PoliPageException('bad version', 'INVALID_VERSION_FORMAT', 400),
+            new PoliPageException('Template not found', 'TEMPLATE_NOT_FOUND', 404),
         );
 
         $client = $this->stubClient($render);
         $tester = new CommandTester(new RenderCommand($client));
         $exitCode = $tester->execute([
-            '--project' => 'p',
-            '--template' => 't',
-            '--template-version' => 'bad',
-            '--data' => '{}',
+            '--project' => 'getting-started',
+            '--template' => 'does-not-exist',
             '--output' => $this->outputPath,
         ]);
 
         self::assertSame(1, $exitCode); // 4xx -> 1
-        self::assertStringContainsString('INVALID_VERSION_FORMAT', $tester->getDisplay());
+        self::assertStringContainsString('TEMPLATE_NOT_FOUND', $tester->getDisplay());
     }
 
     private function stubClient(Render $render): PoliPage
@@ -159,13 +172,5 @@ final class RenderCommandTest extends TestCase
         $reflection->getProperty('render')->setValue($client, $render);
 
         return $client;
-    }
-
-    private function writeTempHtml(string $contents): string
-    {
-        $path = sys_get_temp_dir().'/poli-page-render-test-'.uniqid().'.html';
-        file_put_contents($path, $contents);
-
-        return $path;
     }
 }

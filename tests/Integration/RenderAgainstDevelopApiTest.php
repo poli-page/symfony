@@ -6,7 +6,7 @@ namespace PoliPage\Symfony\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
 use PoliPage\PoliPage;
-use PoliPage\ProjectModeInput;
+use PoliPage\RenderInput;
 use PoliPage\Symfony\Tests\Fixtures\TestKernel;
 use PoliPage\Symfony\Tests\RestoresGlobalHandlers;
 
@@ -20,8 +20,9 @@ final class RenderAgainstDevelopApiTest extends TestCase
         if (false === $key || '' === $key) {
             self::markTestSkipped('POLI_PAGE_API_KEY not set; skipping integration test.');
         }
-        if (!str_starts_with($key, 'pp_test_')) {
-            self::markTestSkipped('POLI_PAGE_API_KEY must be a pp_test_ key; refusing to run integration test against a live key.');
+        // Why: a test-only guard; renders in any other environment count toward the monthly quota.
+        if (!str_starts_with($key, 'pp_sandbox_')) {
+            self::markTestSkipped('POLI_PAGE_API_KEY must be a pp_sandbox_ key; refusing to run the integration test in a counted environment.');
         }
 
         $config = ['api_key' => $key, 'timeout' => 30.0];
@@ -35,11 +36,10 @@ final class RenderAgainstDevelopApiTest extends TestCase
         $client = $kernel->getContainer()->get(PoliPage::class);
         self::assertInstanceOf(PoliPage::class, $client);
 
-        $pdf = $client->render->pdf(new ProjectModeInput(
+        $pdf = $client->render->pdf(new RenderInput(
             project: 'getting-started',
             template: 'welcome',
             data: ['name' => 'symfony-bundle integration test'],
-            version: '1.0.0',
         ));
 
         self::assertNotEmpty($pdf);

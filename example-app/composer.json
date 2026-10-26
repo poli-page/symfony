@@ -9,12 +9,12 @@
         "symfony/runtime": "^7.0",
         "symfony/yaml": "^7.0",
         "poli-page/symfony-bundle": "@dev",
-        "poli-page/sdk": "@dev",
+        "poli-page/sdk": "dev-main#7e16f75decd85d01c57904cd9ebef0c846bd0bb3",
         "symfony/dotenv": "^7.0"
     },
     "repositories": [
         { "type": "path", "url": "../", "options": { "symlink": true, "versions": { "poli-page/symfony-bundle": "0.1.0" } } },
-        { "type": "path", "url": "../../sdk-php.md", "options": { "symlink": true, "versions": { "poli-page/sdk": "0.1.0" } } }
+        { "type": "vcs", "url": "https://github.com/poli-page/sdk-php" }
     ],
     "config": {
         "allow-plugins": {

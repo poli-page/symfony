@@ -26,11 +26,11 @@ final class ConfigurationTest extends TestCase
 
     public function testMinimalConfigOnlyApiKey(): void
     {
-        $kernel = new TestKernel(['api_key' => 'pp_test_abc']);
+        $kernel = new TestKernel(['api_key' => TestKernel::API_KEY]);
         $kernel->boot();
         $c = $kernel->getContainer();
 
-        self::assertSame('pp_test_abc', $c->getParameter('poli_page.api_key'));
+        self::assertSame(TestKernel::API_KEY, $c->getParameter('poli_page.api_key'));
         self::assertNull($c->getParameter('poli_page.base_url'));
         self::assertNull($c->getParameter('poli_page.timeout'));
         self::assertNull($c->getParameter('poli_page.user_agent'));
@@ -45,7 +45,7 @@ final class ConfigurationTest extends TestCase
     public function testFullConfigRoundtrips(): void
     {
         $input = [
-            'api_key' => 'pp_live_full',
+            'api_key' => TestKernel::API_KEY,
             'base_url' => 'https://api.example.com',
             'timeout' => 45.0,
             'user_agent' => 'my-app/1.0',
@@ -61,7 +61,7 @@ final class ConfigurationTest extends TestCase
         $kernel->boot();
         $c = $kernel->getContainer();
 
-        self::assertSame('pp_live_full', $c->getParameter('poli_page.api_key'));
+        self::assertSame(TestKernel::API_KEY, $c->getParameter('poli_page.api_key'));
         self::assertSame('https://api.example.com', $c->getParameter('poli_page.base_url'));
         self::assertSame(45.0, $c->getParameter('poli_page.timeout'));
         self::assertSame('my-app/1.0', $c->getParameter('poli_page.user_agent'));
@@ -82,26 +82,6 @@ final class ConfigurationTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{0: string}>
-     */
-    public static function invalidApiKeyProvider(): iterable
-    {
-        yield 'no prefix' => ['abcdef'];
-        yield 'wrong prefix' => ['sk_test_abc'];
-        yield 'just pp_' => ['pp_abc'];
-        yield 'pp_prod_' => ['pp_prod_abc'];
-    }
-
-    #[DataProvider('invalidApiKeyProvider')]
-    public function testApiKeyMustHavePpTestOrPpLivePrefix(string $key): void
-    {
-        $this->expectException(InvalidConfigurationException::class);
-        $this->expectExceptionMessageMatches('/pp_test_ or pp_live_/');
-
-        (new TestKernel(['api_key' => $key]))->boot();
-    }
-
-    /**
      * @return iterable<string, array{0: float|int}>
      */
     public static function invalidTimeoutProvider(): iterable
@@ -117,7 +97,7 @@ final class ConfigurationTest extends TestCase
         $this->expectException(InvalidConfigurationException::class);
         $this->expectExceptionMessageMatches('/timeout/');
 
-        (new TestKernel(['api_key' => 'pp_test_x', 'timeout' => $value]))->boot();
+        (new TestKernel(['api_key' => TestKernel::API_KEY, 'timeout' => $value]))->boot();
     }
 
     public function testRetriesMaxAttemptsTooHigh(): void
@@ -125,7 +105,7 @@ final class ConfigurationTest extends TestCase
         $this->expectException(InvalidConfigurationException::class);
         $this->expectExceptionMessageMatches('/max_attempts/');
 
-        (new TestKernel(['api_key' => 'pp_test_x', 'retries' => ['max_attempts' => 11]]))->boot();
+        (new TestKernel(['api_key' => TestKernel::API_KEY, 'retries' => ['max_attempts' => 11]]))->boot();
     }
 
     public function testRetriesMaxAttemptsNegative(): void
@@ -133,7 +113,7 @@ final class ConfigurationTest extends TestCase
         $this->expectException(InvalidConfigurationException::class);
         $this->expectExceptionMessageMatches('/max_attempts/');
 
-        (new TestKernel(['api_key' => 'pp_test_x', 'retries' => ['max_attempts' => -1]]))->boot();
+        (new TestKernel(['api_key' => TestKernel::API_KEY, 'retries' => ['max_attempts' => -1]]))->boot();
     }
 
     public function testRetriesDelaySecondsOutOfRange(): void
@@ -141,7 +121,7 @@ final class ConfigurationTest extends TestCase
         $this->expectException(InvalidConfigurationException::class);
         $this->expectExceptionMessageMatches('/delay_seconds/');
 
-        (new TestKernel(['api_key' => 'pp_test_x', 'retries' => ['delay_seconds' => 31]]))->boot();
+        (new TestKernel(['api_key' => TestKernel::API_KEY, 'retries' => ['delay_seconds' => 31]]))->boot();
     }
 
     public function testBaseUrlMustBeHttpScheme(): void
@@ -149,6 +129,6 @@ final class ConfigurationTest extends TestCase
         $this->expectException(InvalidConfigurationException::class);
         $this->expectExceptionMessageMatches('/http/');
 
-        (new TestKernel(['api_key' => 'pp_test_x', 'base_url' => 'ftp://api.poli.page']))->boot();
+        (new TestKernel(['api_key' => TestKernel::API_KEY, 'base_url' => 'ftp://api.poli.page']))->boot();
     }
 }

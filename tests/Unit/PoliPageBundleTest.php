@@ -17,7 +17,7 @@ final class PoliPageBundleTest extends TestCase
 
     public function testExceptionListenerIsNotRegisteredByDefault(): void
     {
-        $kernel = new TestKernel(['api_key' => 'pp_test_x']);
+        $kernel = new TestKernel(['api_key' => TestKernel::API_KEY]);
         $kernel->boot();
 
         self::assertFalse($kernel->getContainer()->has('poli_page.exception_listener'));
@@ -28,7 +28,7 @@ final class PoliPageBundleTest extends TestCase
     public function testExceptionListenerOptInRegistersService(): void
     {
         $kernel = new TestKernel([
-            'api_key' => 'pp_test_x',
+            'api_key' => TestKernel::API_KEY,
             'exception_listener' => ['enabled' => true],
         ]);
         $kernel->boot();
@@ -59,7 +59,7 @@ final class PoliPageBundleTest extends TestCase
 
     public function testPoliPageClientIsAutowireable(): void
     {
-        $kernel = new TestKernel(['api_key' => 'pp_test_resolves']);
+        $kernel = new TestKernel(['api_key' => TestKernel::API_KEY]);
         $kernel->boot();
 
         $container = $kernel->getContainer();
@@ -74,7 +74,7 @@ final class PoliPageBundleTest extends TestCase
     public function testCustomConfigReachesConstructor(): void
     {
         $kernel = new TestKernel([
-            'api_key' => 'pp_test_custom',
+            'api_key' => TestKernel::API_KEY,
             'base_url' => 'https://api.example.com',
             'timeout' => 42.0,
             'retries' => ['max_attempts' => 5, 'delay_seconds' => 0.1],
@@ -85,7 +85,7 @@ final class PoliPageBundleTest extends TestCase
         self::assertInstanceOf(PoliPage::class, $client);
 
         $reflection = new ReflectionClass($client);
-        self::assertSame('pp_test_custom', $reflection->getProperty('apiKey')->getValue($client));
+        self::assertSame(TestKernel::API_KEY, $reflection->getProperty('apiKey')->getValue($client));
         self::assertSame('https://api.example.com', $reflection->getProperty('baseUrl')->getValue($client));
         self::assertSame(42.0, $reflection->getProperty('defaultTimeout')->getValue($client));
         self::assertSame(5, $reflection->getProperty('maxRetries')->getValue($client));

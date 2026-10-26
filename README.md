@@ -31,10 +31,18 @@ composer require poli-page/symfony-bundle
 
 With Symfony Flex the recipe registers the bundle, writes `config/packages/poli_page.yaml`, and appends `POLI_PAGE_API_KEY=` to `.env`. Without Flex, register the bundle in `config/bundles.php` and create the config file yourself (see [Configuration](#configuration)).
 
-Set your key in `.env.local`:
+Set your key in `.env.local`. Each key belongs to one environment of your organization, named in the key:
+
+| Environment                           | Key            | Watermark | Counted |
+| ------------------------------------- | -------------- | --------- | ------- |
+| `sandbox` (every org)                 | `pp_sandbox_…` | yes       | no      |
+| `live` (every org, deletable on Pro+) | `pp_live_…`    | no        | yes     |
+| created on Pro+ (e.g. `staging`)      | `pp_staging_…` | no        | yes     |
+
+"Counted" means the render counts toward the organization's monthly PDF quota. A render uses the project's copy published in the key's environment; there is no template version to pick.
 
 ```
-POLI_PAGE_API_KEY=pp_test_your_key_here
+POLI_PAGE_API_KEY=pp_sandbox_your_key_here
 ```
 
 Verify everything is wired end-to-end:
@@ -43,7 +51,6 @@ Verify everything is wired end-to-end:
 bin/console poli-page:render \
     --project=getting-started \
     --template=welcome \
-    --template-version=1.0.0 \
     --data='{"name":"World"}' \
     -o welcome.pdf
 ```
@@ -55,7 +62,7 @@ bin/console poli-page:render \
 namespace App\Controller;
 
 use PoliPage\PoliPage;
-use PoliPage\ProjectModeInput;
+use PoliPage\RenderInput;
 use PoliPage\Symfony\Http\PoliPageResponseFactory;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -70,11 +77,10 @@ final class InvoiceController
     #[Route('/invoice/{id}', methods: ['GET'])]
     public function show(string $id): Response
     {
-        $pdf = $this->poliPage->render->pdf(new ProjectModeInput(
+        $pdf = $this->poliPage->render->pdf(new RenderInput(
             project: 'invoices',
             template: 'default',
             data: ['invoice_id' => $id],
-            version: '1.0.0',
         ));
 
         return $this->factory->bytes($pdf, "invoice-{$id}.pdf");
@@ -86,7 +92,7 @@ final class InvoiceController
 
 | Option | Default | Description |
 |---|---|---|
-| `api_key` | _required_ | API key starting with `pp_test_` or `pp_live_`. |
+| `api_key` | _required_ | API key, `pp_{environment}_…` (see the key table above). Any non-empty value is accepted and the API decides; a value that does not look like `pp_{environment}_{32 hex}` logs one warning (showing at most the `pp_{environment}_` prefix) when the client is built. |
 | `base_url` | SDK default | Override the API origin (must be http/https). |
 | `timeout` | SDK default | Per-request timeout in seconds (0 < t ≤ 600). |
 | `user_agent` | SDK default | Suffix appended to the SDK's User-Agent. |
@@ -115,7 +121,7 @@ You inspect the resolved config with `bin/console debug:config poli_page`.
 | Symbol | Purpose |
 |---|---|
 | `PoliPage\PoliPage` | Autowired SDK client (`->render`, `->documents`). |
-| `PoliPage\Symfony\Http\PoliPageResponseFactory` | Builds `bytes` / `stream` / `preview` / `documentRedirect` responses with the right headers. |
+| `PoliPage\Symfony\Http\PoliPageResponseFactory` | Builds `bytes` / `stream` / `preview` (a stored document's HTML, `DocumentPreviewResult`) / `documentRedirect` responses with the right headers. |
 | `PoliPage\Symfony\Event\PoliPageRetryEvent` | Dispatched when the SDK retries a request. |
 | `PoliPage\Symfony\Event\PoliPageErrorEvent` | Dispatched when the SDK raises a `PoliPageException`. |
 | `PoliPage\Symfony\PoliPageBundle` | The bundle class registered in `config/bundles.php`. |
@@ -129,7 +135,7 @@ The SDK throws `PoliPage\PoliPageException` (or a subclass). The bundle does not
 
 - **Auth** — `PoliPage\Exception\AuthenticationException`. Invalid or missing API key.
 - **Rate limit** — `PoliPage\Exception\RateLimitException`. You hit the rate limit; retry per `Retry-After`.
-- **Request rejected** — `PoliPage\Exception\BadRequestException`. Template, data, or version rejected by the API.
+- **Request rejected** — `PoliPage\Exception\BadRequestException`. Template or data rejected by the API.
 - **Network / transport** — `PoliPage\Exception\ConnectionException` (includes `TimeoutException`). Connection failure, DNS, TLS, or timeout.
 
 ```php
