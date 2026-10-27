@@ -20,7 +20,8 @@ use Psr\Log\LoggerInterface;
  */
 final class PoliPageClientFactory
 {
-    private const KEY_PATTERN = '/^pp_(?=[a-z][a-z0-9-]{0,19}_)[a-z][a-z0-9]*(?:-[a-z0-9]+)*_[0-9a-f]{32}$/';
+    // Why \z, not $: PHP's $ also matches before a final "\n".
+    private const KEY_PATTERN = '/^pp_(?=[a-z][a-z0-9-]{0,19}_)[a-z][a-z0-9]*(?:-[a-z0-9]+)*_[0-9a-f]{32}\z/';
 
     private const ENVIRONMENT_PREFIX = '/^pp_[A-Za-z0-9-]{1,20}_/';
 

@@ -9,6 +9,7 @@ use PoliPage\PoliPage;
 use PoliPage\PoliPageException;
 use PoliPage\RenderInput;
 use RuntimeException;
+use SensitiveParameter;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -20,8 +21,11 @@ use Throwable;
 #[AsCommand(name: 'poli-page:render', description: 'Smoke-test the Poli Page bundle by rendering a template end-to-end.')]
 final class RenderCommand extends Command
 {
-    public function __construct(private readonly PoliPage $client)
-    {
+    public function __construct(
+        private readonly PoliPage $client,
+        #[SensitiveParameter]
+        private readonly string $apiKey,
+    ) {
         parent::__construct();
     }
 
@@ -45,7 +49,7 @@ final class RenderCommand extends Command
         } catch (PoliPageException $e) {
             $io->error(\sprintf(
                 '%s (status=%s, code=%s, requestId=%s)',
-                $e->getMessage(),
+                $this->withoutApiKey($e->getMessage()),
                 $e->status ?? 'n/a',
                 $e->errorCode,
                 $e->requestId ?? 'n/a',
@@ -53,10 +57,19 @@ final class RenderCommand extends Command
 
             return $this->exitCodeFor($e);
         } catch (Throwable $e) {
-            $io->error($e->getMessage());
+            $io->error($this->withoutApiKey($e->getMessage()));
 
             return Command::FAILURE;
         }
+    }
+
+    /**
+     * Why: a key the HTTP layer rejects (e.g. one ending in a newline) comes
+     * back in the error message with the whole "Bearer <key>" header value.
+     */
+    private function withoutApiKey(string $message): string
+    {
+        return str_replace($this->apiKey, '[redacted API key]', $message);
     }
 
     /**

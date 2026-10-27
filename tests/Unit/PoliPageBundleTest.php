@@ -6,10 +6,17 @@ namespace PoliPage\Symfony\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use PoliPage\PoliPage;
+use PoliPage\PoliPageException;
 use PoliPage\Symfony\EventListener\PoliPageExceptionListener;
 use PoliPage\Symfony\Tests\Fixtures\TestKernel;
 use PoliPage\Symfony\Tests\RestoresGlobalHandlers;
 use ReflectionClass;
+use Symfony\Bundle\FrameworkBundle\Console\Application;
+use Symfony\Component\Console\Tester\CommandTester;
+use Symfony\Component\ErrorHandler\BufferingLogger;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpKernel\Event\ExceptionEvent;
+use Symfony\Component\HttpKernel\HttpKernelInterface;
 
 final class PoliPageBundleTest extends TestCase
 {
@@ -39,6 +46,62 @@ final class PoliPageBundleTest extends TestCase
             PoliPageExceptionListener::class,
             $container->get('poli_page.exception_listener'),
         );
+
+        $kernel->shutdown();
+    }
+
+    /**
+     * A key ending in a newline passes nyholm's header check, then Symfony
+     * HttpClient refuses it with the whole "Authorization: Bearer <key>"
+     * in the message, which the SDK wraps into a network_error.
+     */
+    public function testRenderCommandNeverPrintsTheApiKeyOnTheDefaultTransport(): void
+    {
+        $kernel = new TestKernel([
+            'api_key' => TestKernel::API_KEY."\n",
+            'base_url' => 'http://127.0.0.1:9',
+            'retries' => ['max_attempts' => 0],
+            'logger' => 'app.test_logger',
+        ], ['app.test_logger' => BufferingLogger::class]);
+        $kernel->boot();
+
+        $tester = new CommandTester((new Application($kernel))->find('poli-page:render'));
+        $exitCode = $tester->execute([
+            '--project' => 'getting-started',
+            '--template' => 'welcome',
+            '--output' => sys_get_temp_dir().'/poli-page-render-test-'.uniqid().'.pdf',
+        ]);
+        $display = (string) preg_replace('/\s+/', '', $tester->getDisplay());
+
+        self::assertSame(3, $exitCode);
+        self::assertStringContainsString('CR/LF/NUL', $display);
+        self::assertStringNotContainsString(substr(TestKernel::API_KEY, -32), $display);
+
+        $kernel->shutdown();
+    }
+
+    public function testExceptionListenerNeverSendsTheApiKey(): void
+    {
+        $kernel = new TestKernel([
+            'api_key' => TestKernel::API_KEY,
+            'exception_listener' => ['enabled' => true],
+        ]);
+        $kernel->boot();
+        $listener = $kernel->getContainer()->get('poli_page.exception_listener');
+        self::assertInstanceOf(PoliPageExceptionListener::class, $listener);
+
+        $event = new ExceptionEvent($kernel, new Request(), HttpKernelInterface::MAIN_REQUEST, new PoliPageException(
+            'Invalid header: CR/LF/NUL found in "Authorization: Bearer '.TestKernel::API_KEY."\n\".",
+            PoliPageException::NETWORK_ERROR,
+        ));
+        $listener->onKernelException($event);
+
+        $content = (string) $event->getResponse()?->getContent();
+        self::assertStringNotContainsString(substr(TestKernel::API_KEY, -32), $content);
+        $payload = json_decode($content, true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($payload);
+        self::assertIsString($payload['message']);
+        self::assertStringContainsString('CR/LF/NUL', $payload['message']);
 
         $kernel->shutdown();
     }

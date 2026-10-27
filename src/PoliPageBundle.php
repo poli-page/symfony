@@ -7,6 +7,7 @@ namespace PoliPage\Symfony;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
+use Symfony\Component\DependencyInjection\Parameter;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 
 final class PoliPageBundle extends AbstractBundle
@@ -117,6 +118,7 @@ final class PoliPageBundle extends AbstractBundle
         if (true === ($config['exception_listener']['enabled'] ?? false)) {
             $builder
                 ->register('poli_page.exception_listener', EventListener\PoliPageExceptionListener::class)
+                ->setArgument('$apiKey', new Parameter('poli_page.api_key'))
                 ->addTag('kernel.event_subscriber')
                 ->setPublic(true);
         }

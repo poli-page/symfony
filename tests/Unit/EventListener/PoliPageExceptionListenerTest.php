@@ -19,7 +19,7 @@ final class PoliPageExceptionListenerTest extends TestCase
 {
     public function testMapsPoliPageExceptionToJsonResponseWithApiStatus(): void
     {
-        $listener = new PoliPageExceptionListener();
+        $listener = new PoliPageExceptionListener('pp_sandbox_0123456789abcdef0123456789abcdef');
         $exception = new PoliPageException(
             'Thumbnails require a paid plan.',
             'THUMBNAILS_NOT_AVAILABLE',
@@ -44,7 +44,7 @@ final class PoliPageExceptionListenerTest extends TestCase
 
     public function testDefaultsTo500WhenExceptionHasNoStatus(): void
     {
-        $listener = new PoliPageExceptionListener();
+        $listener = new PoliPageExceptionListener('pp_sandbox_0123456789abcdef0123456789abcdef');
         $exception = new PoliPageException('boom', PoliPageException::NETWORK_ERROR);
         $event = $this->makeEvent($exception);
 
@@ -55,9 +55,28 @@ final class PoliPageExceptionListenerTest extends TestCase
         self::assertSame(500, $response->getStatusCode());
     }
 
+    public function testResponseMessageNeverContainsTheApiKey(): void
+    {
+        $key = 'pp_sandbox_0123456789abcdef0123456789abcdef';
+        $listener = new PoliPageExceptionListener($key);
+        $event = $this->makeEvent(new PoliPageException(
+            'Invalid header: CR/LF/NUL found in "Authorization: Bearer '.$key."\n\".",
+            PoliPageException::NETWORK_ERROR,
+        ));
+
+        $listener->onKernelException($event);
+
+        $content = (string) $event->getResponse()?->getContent();
+        self::assertStringNotContainsString('0123456789abcdef0123456789abcdef', $content);
+        $payload = json_decode($content, true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($payload);
+        self::assertIsString($payload['message']);
+        self::assertStringContainsString('CR/LF/NUL', $payload['message']);
+    }
+
     public function testIgnoresNonPoliPageExceptions(): void
     {
-        $listener = new PoliPageExceptionListener();
+        $listener = new PoliPageExceptionListener('pp_sandbox_0123456789abcdef0123456789abcdef');
         $event = $this->makeEvent(new RuntimeException('unrelated'));
 
         $listener->onKernelException($event);

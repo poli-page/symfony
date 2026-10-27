@@ -75,6 +75,6 @@ return static function (ContainerConfigurator $container): void {
     // ─── Console command ─────────────────────────────────────────────────────
 
     $services->set('poli_page.command.render', RenderCommand::class)
-        ->args([service('poli_page.client')])
+        ->args([service('poli_page.client'), param('poli_page.api_key')])
         ->tag('console.command');
 };

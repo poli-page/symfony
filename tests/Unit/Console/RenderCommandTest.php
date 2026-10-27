@@ -6,6 +6,7 @@ namespace PoliPage\Symfony\Tests\Unit\Console;
 
 use Composer\Autoload\ClassLoader;
 use DG\BypassFinals;
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use PoliPage\PoliPage;
@@ -19,6 +20,8 @@ use Symfony\Component\Console\Tester\CommandTester;
 
 final class RenderCommandTest extends TestCase
 {
+    private const API_KEY = 'pp_sandbox_0123456789abcdef0123456789abcdef';
+
     private string $outputPath;
 
     public static function setUpBeforeClass(): void
@@ -87,7 +90,7 @@ final class RenderCommandTest extends TestCase
 
         $client = $this->stubClient($render);
 
-        $tester = new CommandTester(new RenderCommand($client));
+        $tester = new CommandTester(new RenderCommand($client, self::API_KEY));
         $exitCode = $tester->execute([
             '--project' => 'invoices',
             '--template' => 'default',
@@ -119,7 +122,7 @@ final class RenderCommandTest extends TestCase
         $render = $this->createMock(Render::class);
         $render->expects($this->never())->method('pdf');
 
-        $tester = new CommandTester(new RenderCommand($this->stubClient($render)));
+        $tester = new CommandTester(new RenderCommand($this->stubClient($render), self::API_KEY));
         $exitCode = $tester->execute($options + ['--output' => $this->outputPath]);
 
         self::assertSame(Command::INVALID, $exitCode);
@@ -140,7 +143,7 @@ final class RenderCommandTest extends TestCase
     #[DataProvider('removedOptionProvider')]
     public function testRemovedOptionsNoLongerExist(string $option): void
     {
-        $command = new RenderCommand($this->stubClient($this->createMock(Render::class)));
+        $command = new RenderCommand($this->stubClient($this->createMock(Render::class)), self::API_KEY);
 
         self::assertFalse($command->getDefinition()->hasOption($option));
     }
@@ -153,7 +156,7 @@ final class RenderCommandTest extends TestCase
         );
 
         $client = $this->stubClient($render);
-        $tester = new CommandTester(new RenderCommand($client));
+        $tester = new CommandTester(new RenderCommand($client, self::API_KEY));
         $exitCode = $tester->execute([
             '--project' => 'getting-started',
             '--template' => 'does-not-exist',
@@ -162,6 +165,26 @@ final class RenderCommandTest extends TestCase
 
         self::assertSame(1, $exitCode); // 4xx -> 1
         self::assertStringContainsString('TEMPLATE_NOT_FOUND', $tester->getDisplay());
+    }
+
+    public function testErrorOutputNeverContainsTheApiKey(): void
+    {
+        $render = $this->createMock(Render::class);
+        $render->method('pdf')->willThrowException(new InvalidArgumentException(
+            '"Bearer '.self::API_KEY."\n\" is not valid header value.",
+        ));
+
+        $tester = new CommandTester(new RenderCommand($this->stubClient($render), self::API_KEY));
+        $exitCode = $tester->execute([
+            '--project' => 'getting-started',
+            '--template' => 'welcome',
+            '--output' => $this->outputPath,
+        ]);
+        $display = (string) preg_replace('/\s+/', '', $tester->getDisplay());
+
+        self::assertSame(Command::FAILURE, $exitCode);
+        self::assertStringContainsString('isnotvalidheadervalue', $display);
+        self::assertStringNotContainsString(substr(self::API_KEY, -32), $display);
     }
 
     private function stubClient(Render $render): PoliPage

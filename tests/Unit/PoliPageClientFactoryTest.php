@@ -57,6 +57,7 @@ final class PoliPageClientFactoryTest extends TestCase
         yield 'not a pp_ token' => ['sk_live_'.self::SECRET, self::SECRET];
         yield 'uppercase hex secret' => ['pp_sandbox_'.strtoupper(self::SECRET), strtoupper(self::SECRET)];
         yield '33-character secret' => ['pp_sandbox_'.self::SECRET.'0', self::SECRET];
+        yield 'trailing newline' => ['pp_sandbox_'.self::SECRET."\n", self::SECRET];
     }
 
     #[DataProvider('malformedKeyProvider')]
