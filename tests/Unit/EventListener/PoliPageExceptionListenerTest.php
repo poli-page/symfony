@@ -81,6 +81,7 @@ final class PoliPageExceptionListenerTest extends TestCase
 
         $content = (string) $event->getResponse()?->getContent();
         self::assertStringNotContainsString('0123456789abcdef0123456789abcdef', $content);
+        self::assertStringNotContainsString('pp_sandbox_', $content);
         $payload = json_decode($content, true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($payload);
         self::assertIsString($payload['message']);

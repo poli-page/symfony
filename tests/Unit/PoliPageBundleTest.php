@@ -76,6 +76,7 @@ final class PoliPageBundleTest extends TestCase
         self::assertSame(3, $exitCode);
         self::assertStringContainsString('CR/LF/NUL', $display);
         self::assertStringNotContainsString(substr(TestKernel::API_KEY, -32), $display);
+        self::assertStringNotContainsString('pp_sandbox_', $display);
 
         $kernel->shutdown();
     }
@@ -98,6 +99,7 @@ final class PoliPageBundleTest extends TestCase
 
         $content = (string) $event->getResponse()?->getContent();
         self::assertStringNotContainsString(substr(TestKernel::API_KEY, -32), $content);
+        self::assertStringNotContainsString('pp_sandbox_', $content);
         $payload = json_decode($content, true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($payload);
         self::assertIsString($payload['message']);

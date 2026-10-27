@@ -208,6 +208,7 @@ final class RenderCommandTest extends TestCase
         self::assertSame(Command::FAILURE, $exitCode);
         self::assertStringContainsString('isnotvalidheadervalue', $display);
         self::assertStringNotContainsString(substr(self::API_KEY, -32), $display);
+        self::assertStringNotContainsString('pp_sandbox_', $display);
     }
 
     public function testPoliPageExceptionOutputNeverContainsTheApiKey(): void
@@ -229,6 +230,7 @@ final class RenderCommandTest extends TestCase
         self::assertSame(3, $exitCode);
         self::assertStringContainsString('code=network_error', $display);
         self::assertStringNotContainsString(substr(self::API_KEY, -32), $display);
+        self::assertStringNotContainsString('pp_sandbox_', $display);
     }
 
     private function stubClient(Render $render): PoliPage

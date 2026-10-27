@@ -92,7 +92,7 @@ final class InvoiceController
 
 | Option | Default | Description |
 |---|---|---|
-| `api_key` | _required_ | API key, `pp_{environment}_…` (see the key table above). Any non-empty value is accepted and the API decides; a value that does not look like `pp_{environment}_{32 hex}` logs one warning (showing at most the `pp_{environment}_` prefix, only when `{environment}` is a well-formed environment name) when the client is built. |
+| `api_key` | _required_ | API key, `pp_{environment}_…` (see the key table above). Any non-empty value is accepted and the API decides; a value that does not look like `pp_{environment}_{32 hex}` logs one warning when the client is built. The warning names the expected format and shows no part of the key. |
 | `base_url` | SDK default | Override the API origin (must be http/https). |
 | `timeout` | SDK default | Per-request timeout in seconds (0 < t ≤ 600). |
 | `user_agent` | SDK default | Suffix appended to the SDK's User-Agent. |
