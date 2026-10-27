@@ -25,6 +25,9 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           coverage: none
+          # Global Symfony Flex is what reads extra.symfony.require (set by the
+          # next step); without it the pin is ignored and every leg resolves 7.x.
+          tools: flex
       - name: Pin Symfony version
         working-directory: symfony-bundle
         run: |
@@ -47,6 +50,12 @@ jobs:
             composer update --prefer-dist --no-progress
           else
             echo "Skipping install: no composer.json yet"
+          fi
+      - name: Symfony version under test
+        working-directory: symfony-bundle
+        run: |
+          if [ -f composer.json ]; then
+            composer show symfony/framework-bundle | grep -E '^versions'
           fi
       - name: Lint
         working-directory: symfony-bundle
