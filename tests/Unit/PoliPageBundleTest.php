@@ -53,7 +53,8 @@ final class PoliPageBundleTest extends TestCase
     /**
      * A key ending in a newline passes nyholm's header check, then Symfony
      * HttpClient refuses it with the whole "Authorization: Bearer <key>"
-     * in the message, which the SDK wraps into a network_error.
+     * in the message. poli-page/sdk 0.10.0 refuses such a key with a fixed
+     * invalid_options message before building the request.
      */
     public function testRenderCommandNeverPrintsTheApiKeyOnTheDefaultTransport(): void
     {
@@ -74,7 +75,8 @@ final class PoliPageBundleTest extends TestCase
         $display = (string) preg_replace('/\s+/', '', $tester->getDisplay());
 
         self::assertSame(3, $exitCode);
-        self::assertStringContainsString('CR/LF/NUL', $display);
+        self::assertStringContainsString('apiKeycontainscharactersthatarenotallowedinanHTTPheader', $display);
+        self::assertStringContainsString('code=invalid_options', $display);
         self::assertStringNotContainsString(substr(TestKernel::API_KEY, -32), $display);
         self::assertStringNotContainsString('pp_sandbox_', $display);
 

@@ -7,6 +7,7 @@ namespace PoliPage\Symfony\Tests\Unit\Console;
 use Composer\Autoload\ClassLoader;
 use DG\BypassFinals;
 use GuzzleHttp\Psr7\HttpFactory;
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use PoliPage\PoliPage;
@@ -174,7 +175,7 @@ final class RenderCommandTest extends TestCase
     public static function headerBreakingSuffixProvider(): iterable
     {
         yield 'newline' => ["\n"];
-        // Guzzle trims " \t" before it validates, so its message holds the trimmed key.
+        // Guzzle trims " \t" before it validates, so a leak would hold the trimmed key.
         yield 'newline then space' => ["\n "];
         yield 'newline then tab' => ["\n\t"];
     }
@@ -182,6 +183,8 @@ final class RenderCommandTest extends TestCase
     /**
      * The `request_factory` option accepts a Guzzle PSR-17 factory, whose
      * header check throws with the whole "Bearer <key>" value in its message.
+     * poli-page/sdk 0.10.0 refuses such a key with a fixed invalid_options
+     * message before the factory sees it.
      */
     #[DataProvider('headerBreakingSuffixProvider')]
     public function testErrorOutputNeverContainsTheApiKeyWithGuzzlePsr7(string $suffix): void
@@ -205,8 +208,35 @@ final class RenderCommandTest extends TestCase
         ]);
         $display = (string) preg_replace('/\s+/', '', $tester->getDisplay());
 
+        self::assertSame(3, $exitCode);
+        self::assertStringContainsString('apiKeycontainscharactersthatarenotallowedinanHTTPheader', $display);
+        self::assertStringContainsString('code=invalid_options', $display);
+        self::assertStringNotContainsString(substr(self::API_KEY, -32), $display);
+        self::assertStringNotContainsString('pp_sandbox_', $display);
+    }
+
+    /**
+     * The error Guzzle's PSR-7 raised for such a key before poli-page/sdk 0.10.0.
+     */
+    #[DataProvider('headerBreakingSuffixProvider')]
+    public function testOtherErrorOutputNeverContainsTheTrimmedApiKey(string $suffix): void
+    {
+        $key = self::API_KEY.$suffix;
+        $render = $this->createMock(Render::class);
+        $render->method('pdf')->willThrowException(new InvalidArgumentException(
+            '"Bearer '.rtrim($key, " \t").'" is not valid header value',
+        ));
+
+        $tester = new CommandTester(new RenderCommand($this->stubClient($render), $key));
+        $exitCode = $tester->execute([
+            '--project' => 'getting-started',
+            '--template' => 'welcome',
+            '--output' => $this->outputPath,
+        ]);
+        $display = (string) preg_replace('/\s+/', '', $tester->getDisplay());
+
         self::assertSame(Command::FAILURE, $exitCode);
-        self::assertStringContainsString('isnotvalidheadervalue', $display);
+        self::assertStringContainsString('[redactedAPIkey]', $display);
         self::assertStringNotContainsString(substr(self::API_KEY, -32), $display);
         self::assertStringNotContainsString('pp_sandbox_', $display);
     }

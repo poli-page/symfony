@@ -12,8 +12,9 @@ namespace PoliPage\Symfony;
 final class ApiKeyRedaction
 {
     /**
-     * Why: a key the HTTP layer rejects (e.g. one ending in a newline) comes
-     * back in the error message with the whole "Bearer <key>" header value.
+     * Why: a transport or PSR-7 error about the Authorization header can hold
+     * the whole "Bearer <key>" value (poli-page/sdk before 0.10.0 let a key
+     * ending in a newline reach the HTTP layer, whose message echoes it).
      * Guzzle trims " \t" from the value first, so the trimmed key is redacted too.
      */
     public static function apply(string $apiKey, string $message): string
