@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace PoliPage\Symfony;
 
+use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
+use Symfony\Component\Config\Definition\Builder\NodeDefinition;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
@@ -15,7 +17,7 @@ final class PoliPageBundle extends AbstractBundle
 
     public function configure(DefinitionConfigurator $definition): void
     {
-        $definition->rootNode()
+        self::arrayRoot($definition->rootNode())
             ->children()
                 ->scalarNode('api_key')
                     ->isRequired()
@@ -95,6 +97,19 @@ final class PoliPageBundle extends AbstractBundle
                     ->end()
                 ->end()
             ->end();
+    }
+
+    /**
+     * Why: Symfony 6.4 types rootNode() as NodeDefinition|ArrayNodeDefinition
+     * (7.x narrows it in PHPDoc), but the bundle's root is always an array
+     * node. Narrowing here, behind a NodeDefinition parameter, type-checks on
+     * both versions.
+     */
+    private static function arrayRoot(NodeDefinition $node): ArrayNodeDefinition
+    {
+        \assert($node instanceof ArrayNodeDefinition);
+
+        return $node;
     }
 
     /**
