@@ -29,6 +29,7 @@
     "require-dev": {
         "dg/bypass-finals": "^1.5",
         "friendsofphp/php-cs-fixer": "^3.64",
+        "guzzlehttp/psr7": "^2.6",
         "phpstan/phpstan": "^2.0",
         "phpstan/phpstan-strict-rules": "^2.0",
         "phpstan/phpstan-symfony": "^2.0",

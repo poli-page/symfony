@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PoliPage\Symfony\EventListener;
 
 use PoliPage\PoliPageException;
+use PoliPage\Symfony\ApiKeyRedaction;
 use SensitiveParameter;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -42,9 +43,7 @@ final class PoliPageExceptionListener implements EventSubscriberInterface
 
         $response = new JsonResponse([
             'code' => $payload['code'],
-            // Why: a key the HTTP layer rejects (e.g. one ending in a newline)
-            // comes back in the message with the whole "Bearer <key>" value.
-            'message' => str_replace($this->apiKey, '[redacted API key]', $payload['message']),
+            'message' => ApiKeyRedaction::apply($this->apiKey, $payload['message']),
             'status' => $status,
             'requestId' => $payload['requestId'],
         ], $status);

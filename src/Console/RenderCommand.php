@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use PoliPage\PoliPage;
 use PoliPage\PoliPageException;
 use PoliPage\RenderInput;
+use PoliPage\Symfony\ApiKeyRedaction;
 use RuntimeException;
 use SensitiveParameter;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -49,7 +50,7 @@ final class RenderCommand extends Command
         } catch (PoliPageException $e) {
             $io->error(\sprintf(
                 '%s (status=%s, code=%s, requestId=%s)',
-                $this->withoutApiKey($e->getMessage()),
+                ApiKeyRedaction::apply($this->apiKey, $e->getMessage()),
                 $e->status ?? 'n/a',
                 $e->errorCode,
                 $e->requestId ?? 'n/a',
@@ -57,19 +58,10 @@ final class RenderCommand extends Command
 
             return $this->exitCodeFor($e);
         } catch (Throwable $e) {
-            $io->error($this->withoutApiKey($e->getMessage()));
+            $io->error(ApiKeyRedaction::apply($this->apiKey, $e->getMessage()));
 
             return Command::FAILURE;
         }
-    }
-
-    /**
-     * Why: a key the HTTP layer rejects (e.g. one ending in a newline) comes
-     * back in the error message with the whole "Bearer <key>" header value.
-     */
-    private function withoutApiKey(string $message): string
-    {
-        return str_replace($this->apiKey, '[redacted API key]', $message);
     }
 
     /**

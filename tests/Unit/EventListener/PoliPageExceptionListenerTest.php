@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PoliPage\Symfony\Tests\Unit\EventListener;
 
 use LogicException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use PoliPage\PoliPageException;
 use PoliPage\Symfony\EventListener\PoliPageExceptionListener;
@@ -55,12 +56,24 @@ final class PoliPageExceptionListenerTest extends TestCase
         self::assertSame(500, $response->getStatusCode());
     }
 
-    public function testResponseMessageNeverContainsTheApiKey(): void
+    /**
+     * @return iterable<string, array{0: string}>
+     */
+    public static function headerBreakingSuffixProvider(): iterable
     {
-        $key = 'pp_sandbox_0123456789abcdef0123456789abcdef';
+        yield 'newline' => ["\n"];
+        // Guzzle trims " \t" before it validates, so its message holds the trimmed key.
+        yield 'newline then space' => ["\n "];
+        yield 'newline then tab' => ["\n\t"];
+    }
+
+    #[DataProvider('headerBreakingSuffixProvider')]
+    public function testResponseMessageNeverContainsTheApiKey(string $suffix): void
+    {
+        $key = 'pp_sandbox_0123456789abcdef0123456789abcdef'.$suffix;
         $listener = new PoliPageExceptionListener($key);
         $event = $this->makeEvent(new PoliPageException(
-            'Invalid header: CR/LF/NUL found in "Authorization: Bearer '.$key."\n\".",
+            'Invalid header: CR/LF/NUL found in "Authorization: Bearer '.rtrim($key, " \t").'".',
             PoliPageException::NETWORK_ERROR,
         ));
 

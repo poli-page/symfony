@@ -6,7 +6,7 @@ namespace PoliPage\Symfony\Tests\Unit\Console;
 
 use Composer\Autoload\ClassLoader;
 use DG\BypassFinals;
-use InvalidArgumentException;
+use GuzzleHttp\Psr7\HttpFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use PoliPage\PoliPage;
@@ -17,6 +17,7 @@ use PoliPage\Symfony\Console\RenderCommand;
 use ReflectionClass;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
+use Symfony\Component\HttpClient\Psr18Client;
 
 final class RenderCommandTest extends TestCase
 {
@@ -167,14 +168,36 @@ final class RenderCommandTest extends TestCase
         self::assertStringContainsString('TEMPLATE_NOT_FOUND', $tester->getDisplay());
     }
 
-    public function testErrorOutputNeverContainsTheApiKey(): void
+    /**
+     * @return iterable<string, array{0: string}>
+     */
+    public static function headerBreakingSuffixProvider(): iterable
     {
-        $render = $this->createMock(Render::class);
-        $render->method('pdf')->willThrowException(new InvalidArgumentException(
-            '"Bearer '.self::API_KEY."\n\" is not valid header value.",
-        ));
+        yield 'newline' => ["\n"];
+        // Guzzle trims " \t" before it validates, so its message holds the trimmed key.
+        yield 'newline then space' => ["\n "];
+        yield 'newline then tab' => ["\n\t"];
+    }
 
-        $tester = new CommandTester(new RenderCommand($this->stubClient($render), self::API_KEY));
+    /**
+     * The `request_factory` option accepts a Guzzle PSR-17 factory, whose
+     * header check throws with the whole "Bearer <key>" value in its message.
+     */
+    #[DataProvider('headerBreakingSuffixProvider')]
+    public function testErrorOutputNeverContainsTheApiKeyWithGuzzlePsr7(string $suffix): void
+    {
+        $key = self::API_KEY.$suffix;
+        $factory = new HttpFactory();
+        $client = new PoliPage(
+            apiKey: $key,
+            baseUrl: 'http://127.0.0.1:9',
+            maxRetries: 0,
+            httpClient: new Psr18Client(),
+            requestFactory: $factory,
+            streamFactory: $factory,
+        );
+
+        $tester = new CommandTester(new RenderCommand($client, $key));
         $exitCode = $tester->execute([
             '--project' => 'getting-started',
             '--template' => 'welcome',
@@ -184,6 +207,27 @@ final class RenderCommandTest extends TestCase
 
         self::assertSame(Command::FAILURE, $exitCode);
         self::assertStringContainsString('isnotvalidheadervalue', $display);
+        self::assertStringNotContainsString(substr(self::API_KEY, -32), $display);
+    }
+
+    public function testPoliPageExceptionOutputNeverContainsTheApiKey(): void
+    {
+        $render = $this->createMock(Render::class);
+        $render->method('pdf')->willThrowException(new PoliPageException(
+            'Invalid header: CR/LF/NUL found in "Authorization: Bearer '.self::API_KEY."\n\".",
+            PoliPageException::NETWORK_ERROR,
+        ));
+
+        $tester = new CommandTester(new RenderCommand($this->stubClient($render), self::API_KEY."\n"));
+        $exitCode = $tester->execute([
+            '--project' => 'getting-started',
+            '--template' => 'welcome',
+            '--output' => $this->outputPath,
+        ]);
+        $display = (string) preg_replace('/\s+/', '', $tester->getDisplay());
+
+        self::assertSame(3, $exitCode);
+        self::assertStringContainsString('code=network_error', $display);
         self::assertStringNotContainsString(substr(self::API_KEY, -32), $display);
     }
 
