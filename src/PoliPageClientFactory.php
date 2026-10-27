@@ -20,10 +20,16 @@ use Psr\Log\LoggerInterface;
  */
 final class PoliPageClientFactory
 {
-    // Why \z, not $: PHP's $ also matches before a final "\n".
-    private const KEY_PATTERN = '/^pp_(?=[a-z][a-z0-9-]{0,19}_)[a-z][a-z0-9]*(?:-[a-z0-9]+)*_[0-9a-f]{32}\z/';
+    // The `pp_{env}_` part of the contract's key pattern. A warning shows at
+    // most this part, and only when `{env}` follows the contract grammar
+    // (lowercase, letter first, single inner hyphens, at most 20 characters):
+    // anything looser could show secret material.
+    private const KEY_PREFIX = '^pp_(?=[a-z][a-z0-9-]{0,19}_)[a-z][a-z0-9]*(?:-[a-z0-9]+)*_';
 
-    private const ENVIRONMENT_PREFIX = '/^pp_[A-Za-z0-9-]{1,20}_/';
+    // Why \z, not $: PHP's $ also matches before a final "\n".
+    private const KEY_PATTERN = '/'.self::KEY_PREFIX.'[0-9a-f]{32}\z/';
+
+    private const ENVIRONMENT_PREFIX = '/'.self::KEY_PREFIX.'/';
 
     /**
      * @param (Closure(RetryEvent): void)|null        $onRetry

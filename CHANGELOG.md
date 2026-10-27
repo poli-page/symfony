@@ -12,7 +12,7 @@ All notable changes to `poli-page/symfony-bundle` are documented here. Format fo
 - `example-app/bootstrap.php` — loads the repo-root `.env` before Symfony Runtime starts, so the example app uses the same key as the test suite. Deliberately does not require `vendor/autoload.php` (see CLAUDE.md §10.3).
 
 ### Changed
-- **Environment keys.** An API key is `pp_{environment}_{32 hex}` (`pp_sandbox_…`, `pp_live_…`, `pp_staging_…`). The `api_key` config node no longer checks the key's format, so keys for any environment boot. When the client is built, a key that does not match the SDK contract's full-key pattern logs one warning through `poli_page.logger` (showing at most the `pp_{environment}_` prefix, never the secret); the API stays the only authority on keys. An empty key is still refused by the SDK.
+- **Environment keys.** An API key is `pp_{environment}_{32 hex}` (`pp_sandbox_…`, `pp_live_…`, `pp_staging_…`). The `api_key` config node no longer checks the key's format, so keys for any environment boot. When the client is built, a key that does not match the SDK contract's full-key pattern logs one warning through `poli_page.logger` (showing at most the `pp_{environment}_` prefix, only when `{environment}` is a well-formed environment name, never the secret); the API stays the only authority on keys. An empty key is still refused by the SDK.
 - **Template versions are gone.** Renders use the project's copy published in the key's environment: `poli-page:render`, the example app, the README and the integration test build a `RenderInput` with no `version`.
 - `PoliPageResponseFactory::preview()` takes a `DocumentPreviewResult` only (the stored HTML of a rendered document).
 - The Flex recipe seeds `POLI_PAGE_API_KEY=pp_sandbox_replace_me`.

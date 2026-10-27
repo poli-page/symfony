@@ -53,6 +53,9 @@ final class PoliPageClientFactoryTest extends TestCase
         yield 'uppercase environment' => ['pp_Sandbox_'.self::SECRET, self::SECRET];
         yield 'environment starting with a digit' => ['pp_2fa_'.self::SECRET, self::SECRET];
         yield 'double hyphen in environment' => ['pp_a--b_'.self::SECRET, self::SECRET];
+        yield 'leading hyphen in environment' => ['pp_-eu_'.self::SECRET, self::SECRET];
+        yield 'trailing hyphen in environment' => ['pp_eu-_'.self::SECRET, self::SECRET];
+        yield 'secret-like environment' => ['pp_0123456789abcdef0123_rest', '0123456789abcdef0123'];
         yield '21-character environment' => ['pp_'.str_repeat('a', 21).'_'.self::SECRET, self::SECRET];
         yield 'not a pp_ token' => ['sk_live_'.self::SECRET, self::SECRET];
         yield 'uppercase hex secret' => ['pp_sandbox_'.strtoupper(self::SECRET), strtoupper(self::SECRET)];
@@ -75,37 +78,51 @@ final class PoliPageClientFactoryTest extends TestCase
         self::assertStringNotContainsString($secret, $logged);
     }
 
-    public function testWarningShowsOnlyTheEnvironmentPrefix(): void
+    /**
+     * @return iterable<string, array{0: string, 1: string}> key, prefix the warning shows
+     */
+    public static function shownPrefixProvider(): iterable
     {
-        [, $logs] = $this->buildClient('pp_Sandbox_'.self::SECRET);
-
-        self::assertCount(1, $logs);
-        self::assertStringContainsString('pp_Sandbox_', $logs[0][1]);
+        yield 'short secret' => ['pp_sandbox_x', 'pp_sandbox_'];
+        yield 'hyphenated environment' => ['pp_eu-prod_x', 'pp_eu-prod_'];
+        yield '20-character environment' => ['pp_'.str_repeat('a', 20).'_x', 'pp_'.str_repeat('a', 20).'_'];
     }
 
-    public function testWarningShowsNoPrefixForANonPpToken(): void
+    #[DataProvider('shownPrefixProvider')]
+    public function testWarningShowsTheEnvironmentPrefixOfAContractEnvironmentName(string $key, string $prefix): void
     {
-        [, $logs] = $this->buildClient('sk-'.self::SECRET);
+        [, $logs] = $this->buildClient($key);
 
         self::assertCount(1, $logs);
-        self::assertStringNotContainsString('sk-', $logs[0][1]);
+        self::assertStringStartsWith('Poli Page API key "'.$prefix.'…" does not look like', $logs[0][1]);
     }
 
-    public function testWarningShowsNoPrefixForA21CharacterEnvironment(): void
+    /**
+     * An `{env}` outside the contract grammar may be secret material, so the
+     * warning shows no key text at all.
+     *
+     * @return iterable<string, array{0: string, 1: string}> key, key text that must not be logged
+     */
+    public static function unshownPrefixProvider(): iterable
     {
-        [, $logs] = $this->buildClient('pp_'.str_repeat('a', 21).'_'.self::SECRET);
+        yield 'secret-like environment' => ['pp_0123456789abcdef0123_rest', '0123456789abcdef0123'];
+        yield 'environment starting with a digit' => ['pp_2fa_'.self::SECRET, '2fa'];
+        yield 'uppercase environment' => ['pp_Sandbox_'.self::SECRET, 'Sandbox'];
+        yield 'double hyphen in environment' => ['pp_a--b_'.self::SECRET, 'a--b'];
+        yield 'leading hyphen in environment' => ['pp_-eu_'.self::SECRET, '-eu'];
+        yield 'trailing hyphen in environment' => ['pp_eu-_'.self::SECRET, 'eu-'];
+        yield '21-character environment' => ['pp_'.str_repeat('a', 21).'_'.self::SECRET, str_repeat('a', 21)];
+        yield 'not a pp_ token' => ['sk-'.self::SECRET, 'sk-'];
+    }
+
+    #[DataProvider('unshownPrefixProvider')]
+    public function testWarningShowsNoKeyTextOutsideTheContractEnvironmentGrammar(string $key, string $keyText): void
+    {
+        [, $logs] = $this->buildClient($key);
 
         self::assertCount(1, $logs);
-        self::assertStringNotContainsString('pp_'.str_repeat('a', 21), $logs[0][1]);
         self::assertStringStartsWith('Poli Page API key does not look like', $logs[0][1]);
-    }
-
-    public function testWarningShowsThePrefixOfA20CharacterEnvironment(): void
-    {
-        [, $logs] = $this->buildClient('pp_'.str_repeat('a', 20).'_x');
-
-        self::assertCount(1, $logs);
-        self::assertStringContainsString('"pp_'.str_repeat('a', 20).'_…"', $logs[0][1]);
+        self::assertStringNotContainsString($keyText, $logs[0][1]);
     }
 
     public function testEnvPlaceholderKeyIsResolvedAndChecked(): void
