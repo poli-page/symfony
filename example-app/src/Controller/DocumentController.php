@@ -7,8 +7,11 @@ namespace App\Controller;
 use PoliPage\PoliPage;
 use PoliPage\PoliPageException;
 use PoliPage\RenderInput;
+use PoliPage\Symfony\ApiKeyRedaction;
 use PoliPage\Symfony\Http\PoliPageResponseFactory;
 use PoliPage\ThumbnailOptions;
+use SensitiveParameter;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -18,6 +21,8 @@ final class DocumentController
     public function __construct(
         private readonly PoliPage $poliPage,
         private readonly PoliPageResponseFactory $factory,
+        #[Autowire(param: 'poli_page.api_key'), SensitiveParameter]
+        private readonly string $apiKey,
     ) {
     }
 
@@ -93,7 +98,7 @@ final class DocumentController
             return new JsonResponse([
                 'caught' => true,
                 'code' => $payload['code'],
-                'message' => $payload['message'],
+                'message' => ApiKeyRedaction::apply($this->apiKey, $payload['message']),
                 'status' => $status,
                 'requestId' => $payload['requestId'],
             ], $status);
