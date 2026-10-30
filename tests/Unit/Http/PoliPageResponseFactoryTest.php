@@ -128,7 +128,7 @@ final class PoliPageResponseFactoryTest extends TestCase
 
     public function testStreamOmitsContentLengthWhenTheSizeIsUnknown(): void
     {
-        $stream = $this->createStub(StreamInterface::class);
+        $stream = self::createStub(StreamInterface::class);
         $stream->method('getSize')->willReturn(-1);
         $stream->method('eof')->willReturn(true);
 
@@ -139,7 +139,7 @@ final class PoliPageResponseFactoryTest extends TestCase
 
     public function testStreamOmitsContentLengthWhenTheSizeIsNull(): void
     {
-        $stream = $this->createStub(StreamInterface::class);
+        $stream = self::createStub(StreamInterface::class);
         $stream->method('getSize')->willReturn(null);
         $stream->method('eof')->willReturn(true);
 
