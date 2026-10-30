@@ -5,13 +5,9 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use PoliPage\PoliPage;
-use PoliPage\PoliPageException;
 use PoliPage\RenderInput;
-use PoliPage\Symfony\ApiKeyRedaction;
 use PoliPage\Symfony\Http\PoliPageResponseFactory;
 use PoliPage\ThumbnailOptions;
-use SensitiveParameter;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -21,8 +17,6 @@ final class DocumentController
     public function __construct(
         private readonly PoliPage $poliPage,
         private readonly PoliPageResponseFactory $factory,
-        #[Autowire(param: 'poli_page.api_key'), SensitiveParameter]
-        private readonly string $apiKey,
     ) {
     }
 
@@ -80,30 +74,20 @@ final class DocumentController
     }
 
     /**
-     * Demo step 9: error handling — render a template that does not exist (404 TEMPLATE_NOT_FOUND).
+     * Demo step 9: error handling. Renders a template that does not exist; the
+     * API answers 404 TEMPLATE_NOT_FOUND and the bundle's exception listener
+     * turns the uncaught PoliPageException into its toPayload() body with status 404.
      */
     #[Route('/errors/not-found', name: 'error_not_found', methods: ['GET'])]
-    public function notFound(): JsonResponse
+    public function notFound(): Response
     {
-        try {
-            $this->poliPage->render->pdf(new RenderInput(
-                project: 'getting-started',
-                template: 'does-not-exist',
-                // Why: poli-page/sdk encodes an empty PHP array as JSON [], not {}; one key keeps data an object.
-                data: ['name' => 'Symfony'],
-            ));
-        } catch (PoliPageException $e) {
-            $payload = $e->toPayload();
-            $status = $payload['status'] ?? 500;
-            return new JsonResponse([
-                'caught' => true,
-                'code' => $payload['code'],
-                'message' => ApiKeyRedaction::apply($this->apiKey, $payload['message']),
-                'status' => $status,
-                'requestId' => $payload['requestId'],
-            ], $status);
-        }
+        $pdf = $this->poliPage->render->pdf(new RenderInput(
+            project: 'getting-started',
+            template: 'does-not-exist',
+            // Why: poli-page/sdk encodes an empty PHP array as JSON [], not {}; one key keeps data an object.
+            data: ['name' => 'Symfony'],
+        ));
 
-        return new JsonResponse(['caught' => false, 'note' => 'expected an exception, got success'], 500);
+        return $this->factory->bytes($pdf, 'does-not-exist.pdf');
     }
 }

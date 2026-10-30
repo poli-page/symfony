@@ -42,7 +42,7 @@ If you'd rather drive the routes manually (curl, scripts, integration tests), th
 | 6. `documents->thumbnails(id)` | `GET /documents/{id}/thumbnails` | Page thumbnails as base64 JSON. |
 | 7. `documents->preview(id)` | `GET /documents/{id}/preview` | Stored document's HTML preview. |
 | 8. `documents->delete(id)` | `DELETE /documents/{id}` | Soft-delete, `204 No Content`. |
-| 9. Error handling | `GET /errors/not-found` | Renders `getting-started` / `does-not-exist`; answers `404` with code `TEMPLATE_NOT_FOUND`. |
+| 9. Error handling | `GET /errors/not-found` | Renders `getting-started` / `does-not-exist`. The bundle's exception listener answers `404` with the error's `toPayload()` body: `code` (`TEMPLATE_NOT_FOUND`), `message`, `status` and `requestId`. |
 
 ## Commands
 

@@ -4,5 +4,5 @@ poli_page:
     # Symfony defer validation to runtime, where the value is set. (A `default:`
     # processor here materialises "" at compile time and trips the bundle's scheme check.)
     base_url: '%env(POLI_PAGE_BASE_URL)%'
-    exception_listener:
-        enabled: true  # map PoliPageException -> {code,message,status,requestId} JSON
+    # The bundle's exception listener is on by default: an uncaught
+    # PoliPageException answers its toPayload() JSON body with its status.
