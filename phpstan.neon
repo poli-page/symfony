@@ -7,6 +7,9 @@ parameters:
     paths:
         - src
         - tests
+    # The contract test boots the example app's App\Kernel.
+    scanDirectories:
+        - example-app/src
     excludePaths:
         - tests/Fixtures/TestKernel.php
         # Why: this test mocks PoliPage\Render (final) via dg/bypass-finals
