@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\AsController;
 use Symfony\Component\Routing\Attribute\Route;
 
+// Why: Symfony before 7.3 does not make a class with #[Route] methods a controller service.
+#[AsController]
 final class DemoController
 {
     #[Route('/', name: 'demo_index', methods: ['GET'])]

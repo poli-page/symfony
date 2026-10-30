@@ -10,10 +10,13 @@ use PoliPage\Symfony\Http\PoliPageResponseFactory;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\AsController;
 use Symfony\Component\Routing\Attribute\Route;
 
 use function PoliPage\renderToFile;
 
+// Why: Symfony before 7.3 does not make a class with #[Route] methods a controller service.
+#[AsController]
 final class RenderController
 {
     public function __construct(

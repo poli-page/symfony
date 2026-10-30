@@ -10,8 +10,11 @@ use PoliPage\Symfony\Http\PoliPageResponseFactory;
 use PoliPage\ThumbnailOptions;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\AsController;
 use Symfony\Component\Routing\Attribute\Route;
 
+// Why: Symfony before 7.3 does not make a class with #[Route] methods a controller service.
+#[AsController]
 final class DocumentController
 {
     public function __construct(
