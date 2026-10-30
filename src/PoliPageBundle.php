@@ -74,9 +74,10 @@ final class PoliPageBundle extends AbstractBundle
                 ->scalarNode('on_retry')->defaultNull()->end()
                 ->scalarNode('on_error')->defaultNull()->end()
                 ->arrayNode('exception_listener')
+                    ->info('Answers an uncaught PoliPageException with its toPayload() JSON body and status.')
                     ->addDefaultsIfNotSet()
                     ->children()
-                        ->booleanNode('enabled')->defaultFalse()->end()
+                        ->booleanNode('enabled')->defaultTrue()->end()
                     ->end()
                 ->end()
             ->end();

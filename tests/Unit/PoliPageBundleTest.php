@@ -14,30 +14,19 @@ use ReflectionClass;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\ErrorHandler\BufferingLogger;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
+use Symfony\Component\HttpKernel\KernelEvents;
 
 final class PoliPageBundleTest extends TestCase
 {
     use RestoresGlobalHandlers;
 
-    public function testExceptionListenerIsNotRegisteredByDefault(): void
+    public function testExceptionListenerIsRegisteredByDefault(): void
     {
         $kernel = new TestKernel(['api_key' => TestKernel::API_KEY]);
-        $kernel->boot();
-
-        self::assertFalse($kernel->getContainer()->has('poli_page.exception_listener'));
-
-        $kernel->shutdown();
-    }
-
-    public function testExceptionListenerOptInRegistersService(): void
-    {
-        $kernel = new TestKernel([
-            'api_key' => TestKernel::API_KEY,
-            'exception_listener' => ['enabled' => true],
-        ]);
         $kernel->boot();
 
         $container = $kernel->getContainer();
@@ -46,8 +35,36 @@ final class PoliPageBundleTest extends TestCase
             PoliPageExceptionListener::class,
             $container->get('poli_page.exception_listener'),
         );
+        self::assertTrue(self::listensToKernelExceptions($kernel));
 
         $kernel->shutdown();
+    }
+
+    public function testExceptionListenerCanBeDisabled(): void
+    {
+        $kernel = new TestKernel([
+            'api_key' => TestKernel::API_KEY,
+            'exception_listener' => ['enabled' => false],
+        ]);
+        $kernel->boot();
+
+        self::assertFalse($kernel->getContainer()->has('poli_page.exception_listener'));
+        self::assertFalse(self::listensToKernelExceptions($kernel));
+
+        $kernel->shutdown();
+    }
+
+    private static function listensToKernelExceptions(TestKernel $kernel): bool
+    {
+        $dispatcher = $kernel->getContainer()->get('event_dispatcher');
+        self::assertInstanceOf(EventDispatcherInterface::class, $dispatcher);
+        foreach ($dispatcher->getListeners(KernelEvents::EXCEPTION) as $listener) {
+            if (\is_array($listener) && $listener[0] instanceof PoliPageExceptionListener) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

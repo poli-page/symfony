@@ -7,6 +7,8 @@ namespace PoliPage\Symfony\Tests\Unit\EventListener;
 use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use PoliPage\Exception\ConnectionException;
+use PoliPage\Exception\TimeoutException;
 use PoliPage\PoliPageException;
 use PoliPage\Symfony\EventListener\PoliPageExceptionListener;
 use RuntimeException;
@@ -43,10 +45,10 @@ final class PoliPageExceptionListenerTest extends TestCase
         ], json_decode((string) $response->getContent(), true));
     }
 
-    public function testDefaultsTo500WhenExceptionHasNoStatus(): void
+    public function testAnSdkErrorWithoutStatusAnswers500WithANullStatus(): void
     {
         $listener = new PoliPageExceptionListener('pp_sandbox_0123456789abcdef0123456789abcdef');
-        $exception = new PoliPageException('boom', PoliPageException::NETWORK_ERROR);
+        $exception = new PoliPageException('apiKey is required', PoliPageException::INVALID_OPTIONS);
         $event = $this->makeEvent($exception);
 
         $listener->onKernelException($event);
@@ -54,6 +56,49 @@ final class PoliPageExceptionListenerTest extends TestCase
         $response = $event->getResponse();
         self::assertInstanceOf(JsonResponse::class, $response);
         self::assertSame(500, $response->getStatusCode());
+        self::assertSame('application/json', $response->headers->get('Content-Type'));
+        self::assertSame([
+            'code' => 'invalid_options',
+            'message' => 'apiKey is required',
+            'status' => null,
+            'requestId' => null,
+        ], json_decode((string) $response->getContent(), true));
+    }
+
+    public function testANetworkErrorAnswers503(): void
+    {
+        $listener = new PoliPageExceptionListener('pp_sandbox_0123456789abcdef0123456789abcdef');
+        $event = $this->makeEvent(new ConnectionException('Network request failed', PoliPageException::NETWORK_ERROR));
+
+        $listener->onKernelException($event);
+
+        $response = $event->getResponse();
+        self::assertInstanceOf(JsonResponse::class, $response);
+        self::assertSame(503, $response->getStatusCode());
+        self::assertSame([
+            'code' => 'network_error',
+            'message' => 'Network request failed',
+            'status' => 503,
+            'requestId' => null,
+        ], json_decode((string) $response->getContent(), true));
+    }
+
+    public function testATimeoutAnswers504(): void
+    {
+        $listener = new PoliPageExceptionListener('pp_sandbox_0123456789abcdef0123456789abcdef');
+        $event = $this->makeEvent(new TimeoutException('Request timed out after 60000ms', PoliPageException::TIMEOUT));
+
+        $listener->onKernelException($event);
+
+        $response = $event->getResponse();
+        self::assertInstanceOf(JsonResponse::class, $response);
+        self::assertSame(504, $response->getStatusCode());
+        self::assertSame([
+            'code' => 'timeout',
+            'message' => 'Request timed out after 60000ms',
+            'status' => 504,
+            'requestId' => null,
+        ], json_decode((string) $response->getContent(), true));
     }
 
     /**

@@ -13,12 +13,11 @@ use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 
 /**
- * Translates PoliPageException thrown in controllers into a JSON response
- * carrying the SDK's canonical error payload and the underlying HTTP
- * status (e.g. 404 for a missing document, 403 for a paid-feature gate).
- * Mirrors the global error mapping shipped by the NestJS / Laravel /
- * Next.js / FastAPI demos so all framework integrations expose the same
- * wire shape on errors. Opt-in via `poli_page.exception_listener.enabled`.
+ * Answers a PoliPageException thrown in a controller the way every Poli Page
+ * integration does: status `toPayload()['status']` (503 for network_error,
+ * 504 for timeout, 500 when the SDK knows none) and the body `toPayload()`:
+ * `{ code, message, status, requestId }`. On by default; turned off with
+ * `poli_page.exception_listener.enabled: false`.
  */
 final class PoliPageExceptionListener implements EventSubscriberInterface
 {
@@ -39,14 +38,11 @@ final class PoliPageExceptionListener implements EventSubscriberInterface
         }
 
         $payload = $exception->toPayload();
-        $status = $payload['status'] ?? 500;
+        // Defence in depth: the SDK's messages never hold the key, but a
+        // transport error about the Authorization header could.
+        $payload['message'] = ApiKeyRedaction::apply($this->apiKey, $payload['message']);
 
-        $response = new JsonResponse([
-            'code' => $payload['code'],
-            'message' => ApiKeyRedaction::apply($this->apiKey, $payload['message']),
-            'status' => $status,
-            'requestId' => $payload['requestId'],
-        ], $status);
+        $response = new JsonResponse($payload, $payload['status'] ?? 500);
         $response->headers->set('Cache-Control', 'no-store, private');
 
         $event->setResponse($response);
