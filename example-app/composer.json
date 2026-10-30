@@ -13,7 +13,7 @@
         "symfony/dotenv": "^7.0"
     },
     "repositories": [
-        { "type": "path", "url": "../", "options": { "symlink": true, "versions": { "poli-page/symfony-bundle": "0.1.0" } } }
+        { "type": "path", "url": "../", "options": { "symlink": true, "versions": { "poli-page/symfony-bundle": "0.11.0" } } }
     ],
     "config": {
         "allow-plugins": {

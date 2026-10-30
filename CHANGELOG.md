@@ -4,7 +4,18 @@ All notable changes to `poli-page/symfony-bundle` are documented here. Format fo
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-30
+
+First release on Packagist. The 0.1.0 development line was never published; the Changed, Removed and Fixed entries below describe changes made during that line.
+
 ### Added
+- Modern `AbstractBundle` with full config tree covering every `PoliPage` constructor option.
+- Autowired `PoliPage` client (PSR-18 default: `symfony/http-client`; PSR-17 default: `nyholm/psr7`; PSR-3 default: `logger`).
+- `PoliPageResponseFactory` with `bytes` / `stream` / `preview` / `documentRedirect` builders.
+- `bin/console poli-page:render` command for end-to-end smoke testing.
+- Symfony EventDispatcher integration for the SDK's `onRetry` / `onError` Closure hooks (`PoliPageRetryEvent`, `PoliPageErrorEvent`).
+- Symfony Flex recipe source in `recipes/`, to be submitted to `symfony/recipes-contrib` (until it is accepted, register the bundle by hand as the README shows).
+- Example Symfony 7 app at `example-app/` covering the SDK demo steps.
 - Contract tests: CI runs the integration cases of the Poli Page API contract v1.3.0 (`poli-page/api-contract`) against the example app on every matrix leg, and builds the example app on the Symfony 7 legs.
 - Dependabot for Composer (the bundle and the example app) and GitHub Actions; the API contract has its own group and no cooldown.
 - **Interactive demo UI** at `GET /` in the example app. Single-page editorial-style dashboard with one button per SDK feature, inline PDF/HTML previews via `<iframe>`, pretty-printed JSON for the documents and error endpoints, and copy-buttons for the CLI commands. No new dependencies (no Twig). Files: `example-app/src/Controller/DemoController.php`, `example-app/templates/demo.html`.
@@ -43,16 +54,5 @@ All notable changes to `poli-page/symfony-bundle` are documented here. Format fo
 - `composer install` in `example-app/` no longer errors with "non-existent script @auto-scripts" on PHP 8.5+.
 - `PoliPageResponseFactory::bytes()` / `stream()`: control characters (CR/LF, TAB, DEL, C1) are now stripped from the `Content-Disposition` filename instead of surviving as `?` in the fallback and `%0D%0A` in `filename*`. Filenames containing `/`, `\` or `%` no longer throw `InvalidArgumentException` from `HeaderUtils::makeDisposition()` (a 500): path separators become `_`, and `%` becomes `?` in the ASCII fallback only. The fallback now has one `?` per non-ASCII character (was one per UTF-8 byte), and a filename made only of control characters falls back to `document.pdf`.
 
-## [0.1.0] — TBD
-
-### Added
-- Modern `AbstractBundle` with full config tree covering every `PoliPage` constructor option.
-- Autowired `PoliPage` client (PSR-18 default: `symfony/http-client`; PSR-17 default: `nyholm/psr7`; PSR-3 default: `logger`).
-- `PoliPageResponseFactory` with `bytes` / `stream` / `preview` / `documentRedirect` builders.
-- `bin/console poli-page:render` command for end-to-end smoke testing.
-- Symfony EventDispatcher integration for the SDK's `onRetry` / `onError` Closure hooks (`PoliPageRetryEvent`, `PoliPageErrorEvent`).
-- Symfony Flex recipe (separate PR to `symfony/recipes-contrib`).
-- Example Symfony 7 app at `example-app/` covering all 10 SDK demo steps.
-
-[Unreleased]: https://github.com/poli-page/symfony-bundle/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/poli-page/symfony-bundle/releases/tag/v0.1.0
+[Unreleased]: https://github.com/poli-page/symfony/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/poli-page/symfony/releases/tag/v0.11.0

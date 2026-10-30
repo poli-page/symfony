@@ -2,7 +2,7 @@
 
 The files here are the canonical source for the Symfony Flex recipe shipped at:
 
-  `github.com/symfony/recipes-contrib/tree/main/poli-page/symfony-bundle/0.1`
+  `github.com/symfony/recipes-contrib/tree/main/poli-page/symfony-bundle/0.11`
 
 Process for submitting / updating:
 

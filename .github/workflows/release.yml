@@ -1,0 +1,141 @@
+name: Release
+
+# Tag-triggered release pipeline, the same as poli-page/sdk-php's. Packagist has
+# no upload step: a version is published the moment Packagist re-crawls the
+# repository and sees the tag (on a ping of its update API, or on its GitHub
+# webhook). To keep a human in the loop we deliberately do NOT install the
+# Packagist auto-update webhook; instead this workflow runs the full CI matrix
+# and a version check on the tagged commit, pauses at the `packagist-release`
+# Environment for manual approval, and only then notifies Packagist. The tag
+# push is the trigger; the Approve button is the publish.
+#
+# The publish job needs BOTH the full matrix (ci.yml, the same workflow CI runs
+# on every push) and the version check, so the approval is never offered while
+# anything is failing.
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*' # prereleases (e.g. v1.0.0-rc1)
+
+# Default to read-only; the publish job grants itself contents:write for the
+# GitHub Release.
+permissions:
+  contents: read
+
+jobs:
+  # The full Symfony x PHP matrix on the tagged commit: lint, PHPStan, unit
+  # tests, the API contract suite (pinned poli-page/api-contract, POLI_CONTRACT)
+  # and the example-app build. The live API job in ci.yml only runs on `main`,
+  # so it is skipped here.
+  test:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml
+
+  validate-version:
+    name: Version matches tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2.40.0
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      # Packagist takes the version from the tag, so composer.json carries no
+      # `version` field. The repository states its version in two places: the
+      # CHANGELOG section of the release and the path-repository version the
+      # example app installs the package as. Both must match the tag.
+      - name: Version matches tag
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          if [ "$(jq -r '.version // empty' composer.json)" != "" ]; then
+            echo "::error::composer.json has a version field; Packagist takes the version from the tag"
+            exit 1
+          fi
+          if ! awk -v h="## [${version}]" 'index($0, h) == 1 { found = 1 } END { exit !found }' CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [${version}]' section"
+            exit 1
+          fi
+          example="$(jq -r '.repositories[] | select(.type == "path") | .options.versions["poli-page/symfony-bundle"]' example-app/composer.json)"
+          if [ "$example" != "$version" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match the example app's poli-page/symfony-bundle version ($example)"
+            exit 1
+          fi
+          echo "Tag matches the CHANGELOG and the example app: $version"
+
+  publish:
+    name: Publish to Packagist
+    needs: [test, validate-version]
+    runs-on: ubuntu-latest
+    # The Environment is the approval gate: `packagist-release` is configured
+    # in repo Settings -> Environments with required reviewers. The job will
+    # not start until a reviewer approves, so nothing reaches Packagist before
+    # then. Because it `needs` both jobs above, the approval is never offered
+    # unless the full matrix and the version check are green.
+    environment: packagist-release
+    permissions:
+      contents: write # create the GitHub Release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # This is the publish. Packagist re-crawls the repo, sees the new tag,
+      # and indexes the version. Accepts 200 (done) or 202 (queued).
+      - name: Notify Packagist
+        env:
+          PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
+          PACKAGIST_API_TOKEN: ${{ secrets.PACKAGIST_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          code="$(curl -sS -o /tmp/packagist.out -w '%{http_code}' -XPOST \
+            -H 'content-type: application/json' \
+            "https://packagist.org/api/update-package?username=${PACKAGIST_USERNAME}&apiToken=${PACKAGIST_API_TOKEN}" \
+            -d '{"repository":{"url":"https://github.com/poli-page/symfony"}}')"
+          cat /tmp/packagist.out; echo
+          if [ "$code" != "200" ] && [ "$code" != "202" ]; then
+            echo "::error::Packagist update API returned HTTP $code"
+            exit 1
+          fi
+          echo "Packagist notified (HTTP $code)."
+
+      # Pull the matching CHANGELOG section for the release body. Falls back to
+      # a pointer if the section is absent so the release never fails on notes.
+      - name: Extract CHANGELOG section
+        id: changelog
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          notes="${RUNNER_TEMP}/release-notes.md"
+          awk -v ver="$version" '
+            $0 ~ "^## \\[" ver "\\]" { capture = 1; next }
+            capture && /^## \[/        { exit }
+            capture && /^\[[^]]+\]: / { exit }
+            capture                    { print }
+          ' CHANGELOG.md > "$notes"
+          if [ ! -s "$notes" ]; then
+            echo "_See [CHANGELOG.md](CHANGELOG.md) for details._" > "$notes"
+          fi
+          echo "notes_file=$notes" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          prerelease=()
+          case "${GITHUB_REF_NAME}" in
+            *-*) prerelease=(--prerelease) ;;
+          esac
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file "${{ steps.changelog.outputs.notes_file }}" \
+            "${prerelease[@]}"

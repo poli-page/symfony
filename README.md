@@ -30,7 +30,23 @@ This bundle wires the Poli Page PHP SDK into Symfony's container, EventDispatche
 composer require poli-page/symfony-bundle
 ```
 
-With Symfony Flex the recipe registers the bundle, writes `config/packages/poli_page.yaml`, and appends `POLI_PAGE_API_KEY=` to `.env`. Without Flex, register the bundle in `config/bundles.php` and create the config file yourself (see [Configuration](#configuration)).
+Register the bundle in `config/bundles.php`:
+
+```php
+return [
+    // ...
+    PoliPage\Symfony\PoliPageBundle::class => ['all' => true],
+];
+```
+
+Create `config/packages/poli_page.yaml` (every option is listed under [Configuration](#configuration)):
+
+```yaml
+poli_page:
+    api_key: '%env(POLI_PAGE_API_KEY)%'
+```
+
+and add `POLI_PAGE_API_KEY=` to `.env`. Once the bundle's Flex recipe is accepted in [symfony/recipes-contrib](https://github.com/symfony/recipes-contrib), `composer require` will do these three steps for you.
 
 Set your key in `.env.local`. Each key belongs to one environment of your organization, named in the key:
 
@@ -96,7 +112,6 @@ final class InvoiceController
 | `api_key` | _required_ | API key, `pp_{environment}_…` (see the key table above). Any non-empty value is accepted and the API decides; a value that does not look like `pp_{environment}_{32 hex}` logs one warning when the client is built. The warning names the expected format and shows no part of the key. |
 | `base_url` | SDK default | Override the API origin (must be http/https). |
 | `timeout` | SDK default | Per-request timeout in seconds (0 < t ≤ 600). |
-| `user_agent` | SDK default | Suffix appended to the SDK's User-Agent. |
 | `retries.max_attempts` | SDK default | Retry budget (0–10). |
 | `retries.delay_seconds` | SDK default | Base delay before the first retry (0–30s). |
 | `http_client` | `symfony/http-client` | PSR-18 service id. |
@@ -129,7 +144,7 @@ You inspect the resolved config with `bin/console debug:config poli_page`.
 | `PoliPage\Symfony\PoliPageBundle` | The bundle class registered in `config/bundles.php`. |
 | `poli-page:render` | Console command that renders a template end-to-end. |
 
-Full reference: [docs/api.md](docs/api.md).
+Full reference: [docs.poli.page](https://docs.poli.page).
 
 ## Errors
 
@@ -202,18 +217,11 @@ composer install
 composer serve   # → http://127.0.0.1:8000
 ```
 
-## Going further
-
-- [docs/events.md](docs/events.md) — Subscribe to `PoliPageRetryEvent` / `PoliPageErrorEvent` with `#[AsEventListener]`.
-- [docs/streaming.md](docs/streaming.md) — Stream multi-MB PDFs through `PoliPageResponseFactory::stream()`.
-- [docs/responses.md](docs/responses.md) — All four response builders, their headers, and the RFC 5987 filename encoding.
-- [docs/cli.md](docs/cli.md) — Every `poli-page:render` flag, exit codes, and CI recipes.
-
 ## Compatibility
 
 | Bundle | Symfony | PHP |
 |---|---|---|
-| 0.1.x | 6.4 LTS / 7.x | 8.3 – 8.4 |
+| 0.11.x | 6.4 LTS / 7.x | 8.3 – 8.4 |
 
 Supported Symfony lines follow the upstream LTS schedule.
 
