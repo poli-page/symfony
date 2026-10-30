@@ -31,6 +31,7 @@ All notable changes to `poli-page/symfony-bundle` are documented here. Format fo
 - Example app: `GET /render/preview` and its dashboard button. `GET /documents/{id}/preview` stays.
 
 ### Fixed
+- `PoliPageResponseFactory::stream()` reads the first chunk before it returns, so a download that fails on its first read (`DOWNLOAD_FAILED`, `network_error`) reaches the exception listener and answers its JSON payload, instead of a `200` with PDF headers and no body.
 - Example app: the controllers carry `#[AsController]`, so the routes work on Symfony before 7.3 (they answered 500, "cannot be fetched from the container because it is private"). `example-app/.env` gives `POLI_PAGE_BASE_URL` an empty default, so the app no longer fails with "Environment variable not found" when it is unset.
 - 8 PHPUnit "risky" warnings caused by Symfony's `FrameworkBundle::boot()` leaking a global error handler past test boundaries.
 - A key ending in a newline now logs the malformed-key warning (the format check is anchored with `\z`, not `$`).
