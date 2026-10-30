@@ -21,6 +21,7 @@ This bundle wires the Poli Page PHP SDK into Symfony's container, EventDispatche
 
 - PHP 8.3+
 - Symfony 6.4 LTS or 7.x
+- [`poli-page/sdk`](https://packagist.org/packages/poli-page/sdk) 0.11.0 or later (Composer installs it with the bundle)
 - A Poli Page API key from [app.poli.page](https://app.poli.page)
 
 ## Install
@@ -104,6 +105,7 @@ final class InvoiceController
 | `logger` | `logger` | PSR-3 service id. |
 | `on_retry` | none | Service implementing `__invoke(RetryEvent)`. |
 | `on_error` | none | Service implementing `__invoke(PoliPageException)`. |
+| `exception_listener.enabled` | `true` | Answers an uncaught `PoliPageException` with its `toPayload()` JSON body and status (see [Errors](#errors)). Set to `false` to handle it yourself. |
 
 ```yaml
 # config/packages/poli_page.yaml
@@ -131,7 +133,30 @@ Full reference: [docs/api.md](docs/api.md).
 
 ## Errors
 
-The SDK throws `PoliPage\PoliPageException` (or a subclass). The bundle does not catch or transform them — you handle them in your controller, an event listener, or a Symfony exception subscriber. The four categories you typically discriminate on:
+### Exception listener
+
+The bundle registers a `kernel.exception` listener, on by default. A `PoliPage\PoliPageException` that your controller does not catch becomes a JSON answer built from the SDK's `toPayload()`:
+
+```json
+{ "code": "TEMPLATE_NOT_FOUND", "message": "Template 'does-not-exist' not found in project 'getting-started'.", "status": 404, "requestId": "req_…" }
+```
+
+- The HTTP status is the payload's `status`: the API's status (404, 429, 500, …), `503` for a `network_error` and `504` for a `timeout`. An SDK error with no status (for example `invalid_options`) answers `500`, with `"status": null` in the body.
+- `requestId` is the API's `x-request-id`, or `null` when there is none.
+- The `Content-Type` is `application/json`, with `Cache-Control: no-store, private`. Symfony still logs the exception as usual.
+
+To handle SDK errors yourself, turn it off:
+
+```yaml
+# config/packages/poli_page.yaml
+poli_page:
+    exception_listener:
+        enabled: false
+```
+
+### Exception types
+
+The SDK throws `PoliPage\PoliPageException` (or a subclass). Catch them in your controller where you want a different answer than the listener's. The four categories you typically discriminate on:
 
 - **Auth** — `PoliPage\Exception\AuthenticationException`. Invalid or missing API key.
 - **Rate limit** — `PoliPage\Exception\RateLimitException`. You hit the rate limit; retry per `Retry-After`.
@@ -167,7 +192,7 @@ try {
 
 ## Example app
 
-A runnable Symfony 7 app exercising every public method of the SDK lives in [`example-app/`](example-app/). It exposes an interactive dashboard at `http://127.0.0.1:8000/` with one button per SDK feature, plus the underlying JSON / PDF routes for scripted use.
+A runnable Symfony 7 app exercising every public method of the SDK lives in [`example-app/`](example-app/). It exposes an interactive dashboard at `http://127.0.0.1:8000/` with one button per SDK feature, plus the underlying JSON / PDF routes for scripted use (`GET /render/pdf`, `GET /documents/{id}`, `GET /errors/not-found`, …).
 
 ```bash
 cd example-app
@@ -192,7 +217,20 @@ Supported Symfony lines follow the upstream LTS schedule.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+```bash
+composer install
+composer ci            # php-cs-fixer, PHPStan and the unit tests
+```
+
+### Contract tests
+
+`tests/Contract/ImplContractTest.php` runs the integration cases of the Poli Page API contract (`impl.*` in [poli-page/api-contract](https://github.com/poli-page/api-contract)) against the example app, with its SDK pointed at a local mock API. CI runs them against the contract version pinned in `.github/workflows/ci.yml`. Locally:
+
+```bash
+POLI_CONTRACT=/path/to/contract.json vendor/bin/phpunit --testsuite=contract
+```
+
+Without `POLI_CONTRACT` the suite is skipped (it fails when `CI` is set). A case that must fail for now goes in `tests/contract-skip.json` with its reason.
 
 ## License
 
