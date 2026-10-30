@@ -117,6 +117,41 @@ final class PoliPageClientFactoryTest extends TestCase
         self::assertSame(self::WARNING, $logs[0][1]);
     }
 
+    /**
+     * @return iterable<string, array{0: string}>
+     */
+    public static function emptyBaseUrlProvider(): iterable
+    {
+        yield 'empty string' => [''];
+        yield 'env placeholder resolving to an empty string' => ['%env(POLI_PAGE_BASE_URL_UNDER_TEST)%'];
+    }
+
+    #[DataProvider('emptyBaseUrlProvider')]
+    public function testEmptyBaseUrlUsesTheSdkDefault(string $baseUrl): void
+    {
+        $_SERVER['POLI_PAGE_BASE_URL_UNDER_TEST'] = '';
+        try {
+            $kernel = $this->bootKernel('pp_sandbox_'.self::SECRET, $baseUrl);
+            $client = $kernel->getContainer()->get(PoliPage::class);
+            self::assertInstanceOf(PoliPage::class, $client);
+            $kernel->shutdown();
+        } finally {
+            unset($_SERVER['POLI_PAGE_BASE_URL_UNDER_TEST']);
+        }
+
+        self::assertSame('https://api.poli.page', (new ReflectionClass($client))->getProperty('baseUrl')->getValue($client));
+    }
+
+    public function testExplicitBaseUrlIsKept(): void
+    {
+        $kernel = $this->bootKernel('pp_sandbox_'.self::SECRET, 'https://api.example.test');
+        $client = $kernel->getContainer()->get(PoliPage::class);
+        self::assertInstanceOf(PoliPage::class, $client);
+        $kernel->shutdown();
+
+        self::assertSame('https://api.example.test', (new ReflectionClass($client))->getProperty('baseUrl')->getValue($client));
+    }
+
     public function testEmptyKeyIsRefusedBySdkWithoutWarning(): void
     {
         $kernel = $this->bootKernel('');
@@ -156,10 +191,10 @@ final class PoliPageClientFactoryTest extends TestCase
         return [$client, $logs];
     }
 
-    private function bootKernel(string $apiKey): TestKernel
+    private function bootKernel(string $apiKey, ?string $baseUrl = null): TestKernel
     {
         $kernel = new TestKernel(
-            ['api_key' => $apiKey, 'logger' => 'app.test_logger'],
+            ['api_key' => $apiKey, 'base_url' => $baseUrl, 'logger' => 'app.test_logger'],
             ['app.test_logger' => BufferingLogger::class],
         );
         $kernel->boot();

@@ -52,7 +52,9 @@ final class PoliPageClientFactory
 
         return new PoliPage(
             apiKey: $apiKey,
-            baseUrl: $baseUrl,
+            // Why: an empty base_url (e.g. POLI_PAGE_BASE_URL= in .env) means
+            // "unset"; the SDK only falls back to its default URL on null.
+            baseUrl: '' === $baseUrl ? null : $baseUrl,
             maxRetries: $maxRetries,
             retryDelay: $retryDelay,
             timeout: $timeout,

@@ -1,8 +1,6 @@
 poli_page:
     api_key: '%env(POLI_PAGE_API_KEY)%'
-    # Optional: empty means the SDK's default API URL. A plain env placeholder lets
-    # Symfony defer validation to runtime, where the value is set. (A `default:`
-    # processor here materialises "" at compile time and trips the bundle's scheme check.)
-    base_url: '%env(POLI_PAGE_BASE_URL)%'
+    # Optional: unset or empty means the SDK's default API URL.
+    base_url: '%env(default::POLI_PAGE_BASE_URL)%'
     # The bundle's exception listener is on by default: an uncaught
     # PoliPageException answers its toPayload() JSON body with its status.
