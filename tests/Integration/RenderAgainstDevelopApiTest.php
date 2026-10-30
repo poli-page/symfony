@@ -26,6 +26,11 @@ final class RenderAgainstDevelopApiTest extends TestCase
         }
 
         $config = ['api_key' => $key, 'timeout' => 30.0];
+        // Why: the live job targets POLI_PAGE_BASE_URL when it is set, else the SDK default.
+        $baseUrl = getenv('POLI_PAGE_BASE_URL');
+        if (false !== $baseUrl && '' !== $baseUrl) {
+            $config['base_url'] = $baseUrl;
+        }
         $kernel = new TestKernel($config);
         $kernel->boot();
 

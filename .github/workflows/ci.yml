@@ -111,12 +111,16 @@ jobs:
           if [ -f composer.json ]; then
             composer update --prefer-dist --no-progress
           fi
-      - name: Live API test (prod, sandbox key)
+      - name: Live API test (sandbox key)
         if: steps.key.outputs.present == 'true'
         working-directory: symfony-bundle
         env:
           POLI_PAGE_API_KEY: ${{ secrets.POLI_PAGE_API_KEY }}
+          POLI_PAGE_BASE_URL: ${{ secrets.POLI_PAGE_BASE_URL }}
         run: |
+          # An unset secret expands to an empty string; drop it so the SDK
+          # falls back to its default base URL.
+          if [ -z "$POLI_PAGE_BASE_URL" ]; then unset POLI_PAGE_BASE_URL; fi
           if [ -d tests/Integration ] && [ -n "$(ls -A tests/Integration 2>/dev/null)" ]; then
             vendor/bin/phpunit --testsuite=integration
           else
