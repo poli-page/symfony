@@ -46,7 +46,6 @@ final class PoliPageBundle extends AbstractBundle
                         ->thenInvalid('timeout must be > 0 and <= 600 seconds. Got: %s')
                     ->end()
                 ->end()
-                ->scalarNode('user_agent')->defaultNull()->end()
                 ->arrayNode('retries')
                     ->addDefaultsIfNotSet()
                     ->children()
@@ -105,7 +104,6 @@ final class PoliPageBundle extends AbstractBundle
         $builder->setParameter('poli_page.api_key', $config['api_key']);
         $builder->setParameter('poli_page.base_url', $config['base_url']);
         $builder->setParameter('poli_page.timeout', $config['timeout']);
-        $builder->setParameter('poli_page.user_agent', $config['user_agent']);
         $builder->setParameter('poli_page.retries.max_attempts', $config['retries']['max_attempts']);
         $builder->setParameter('poli_page.retries.delay_seconds', $config['retries']['delay_seconds']);
         $builder->setParameter('poli_page.on_retry', $config['on_retry']);

@@ -1,6 +1,8 @@
 name: CI
 on:
+  # Branches only: a tag push runs this workflow through release.yml instead.
   push:
+    branches: ['**']
   pull_request:
     branches: [main]
   workflow_dispatch:
