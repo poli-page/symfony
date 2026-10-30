@@ -62,7 +62,7 @@ jobs:
         working-directory: symfony-bundle
         env:
           POLI_CONTRACT: ${{ steps.contract.outputs.path }}
-        run: vendor/bin/phpunit --testsuite=contract
+        run: vendor/bin/phpunit --testsuite=contract --testdox
       - name: Build the example app
         # The example app requires Symfony 7.
         if: matrix.symfony == '7.*'
