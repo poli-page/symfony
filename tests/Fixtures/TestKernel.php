@@ -13,6 +13,8 @@ use Symfony\Component\HttpKernel\Kernel;
 
 final class TestKernel extends Kernel
 {
+    public const API_KEY = 'pp_sandbox_0123456789abcdef0123456789abcdef';
+
     private readonly string $instanceId;
 
     /**
@@ -20,7 +22,7 @@ final class TestKernel extends Kernel
      * @param array<string, class-string|null> $extraServices  service id => class name, registered as public services
      */
     public function __construct(
-        private readonly array $poliPageConfig = ['api_key' => 'pp_test_dummy_for_kernel_boot'],
+        private readonly array $poliPageConfig = ['api_key' => self::API_KEY],
         private readonly array $extraServices = [],
     ) {
         // Why: spl_object_hash collides after GC across instances; use a

@@ -5,14 +5,16 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use PoliPage\PoliPage;
-use PoliPage\PoliPageException;
-use PoliPage\ProjectModeInput;
+use PoliPage\RenderInput;
 use PoliPage\Symfony\Http\PoliPageResponseFactory;
 use PoliPage\ThumbnailOptions;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\AsController;
 use Symfony\Component\Routing\Attribute\Route;
 
+// Why: Symfony before 7.3 does not make a class with #[Route] methods a controller service.
+#[AsController]
 final class DocumentController
 {
     public function __construct(
@@ -22,7 +24,7 @@ final class DocumentController
     }
 
     /**
-     * Demo step 6: documents->get(id) — fresh descriptor + presigned URL, then 302.
+     * Demo step 5: documents->get(id) — fresh descriptor + presigned URL, then 302.
      */
     #[Route('/documents/{id}', name: 'document_get', methods: ['GET'])]
     public function get(string $id): Response
@@ -33,7 +35,7 @@ final class DocumentController
     }
 
     /**
-     * Demo step 7: documents->thumbnails(id, opts).
+     * Demo step 6: documents->thumbnails(id, opts).
      */
     #[Route('/documents/{id}/thumbnails', name: 'document_thumbnails', methods: ['GET'])]
     public function thumbnails(string $id): JsonResponse
@@ -53,7 +55,7 @@ final class DocumentController
     }
 
     /**
-     * Demo step 8: documents->preview(id).
+     * Demo step 7: documents->preview(id).
      */
     #[Route('/documents/{id}/preview', name: 'document_preview', methods: ['GET'])]
     public function preview(string $id): Response
@@ -64,7 +66,7 @@ final class DocumentController
     }
 
     /**
-     * Demo step 9: documents->delete(id).
+     * Demo step 8: documents->delete(id).
      */
     #[Route('/documents/{id}', name: 'document_delete', methods: ['DELETE'])]
     public function delete(string $id): Response
@@ -75,30 +77,20 @@ final class DocumentController
     }
 
     /**
-     * Demo step 10: error handling — deliberately trigger INVALID_VERSION_FORMAT.
+     * Demo step 9: error handling. Renders a template that does not exist; the
+     * API answers 404 TEMPLATE_NOT_FOUND and the bundle's exception listener
+     * turns the uncaught PoliPageException into its toPayload() body with status 404.
      */
-    #[Route('/errors/bad-version', name: 'error_bad_version', methods: ['GET'])]
-    public function badVersion(): JsonResponse
+    #[Route('/errors/not-found', name: 'error_not_found', methods: ['GET'])]
+    public function notFound(): Response
     {
-        try {
-            $this->poliPage->render->pdf(new ProjectModeInput(
-                project: 'getting-started',
-                template: 'welcome',
-                data: [],
-                version: 'not-semver',
-            ));
-        } catch (PoliPageException $e) {
-            $payload = $e->toPayload();
-            $status = $payload['status'] ?? 500;
-            return new JsonResponse([
-                'caught' => true,
-                'code' => $payload['code'],
-                'message' => $payload['message'],
-                'status' => $status,
-                'requestId' => $payload['requestId'],
-            ], $status);
-        }
+        $pdf = $this->poliPage->render->pdf(new RenderInput(
+            project: 'getting-started',
+            template: 'does-not-exist',
+            // Why: poli-page/sdk encodes an empty PHP array as JSON [], not {}; one key keeps data an object.
+            data: ['name' => 'Symfony'],
+        ));
 
-        return new JsonResponse(['caught' => false, 'note' => 'expected an exception, got success'], 500);
+        return $this->factory->bytes($pdf, 'does-not-exist.pdf');
     }
 }

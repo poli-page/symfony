@@ -22,7 +22,7 @@ final class EventDispatcherIntegrationTest extends TestCase
 
     public function testRetryListenerDispatchesRetryEvent(): void
     {
-        $kernel = new TestKernel(['api_key' => 'pp_test_evt']);
+        $kernel = new TestKernel(['api_key' => TestKernel::API_KEY]);
         $kernel->boot();
         $container = $kernel->getContainer();
 
@@ -48,7 +48,7 @@ final class EventDispatcherIntegrationTest extends TestCase
 
     public function testErrorListenerDispatchesErrorEvent(): void
     {
-        $kernel = new TestKernel(['api_key' => 'pp_test_err']);
+        $kernel = new TestKernel(['api_key' => TestKernel::API_KEY]);
         $kernel->boot();
         $container = $kernel->getContainer();
 
@@ -81,7 +81,7 @@ final class EventDispatcherIntegrationTest extends TestCase
     public function testUserOnRetryAliasOverridesInternalListener(): void
     {
         $kernel = new TestKernel(
-            ['api_key' => 'pp_test_custom_hook', 'on_retry' => 'app.custom_retry_listener'],
+            ['api_key' => TestKernel::API_KEY, 'on_retry' => 'app.custom_retry_listener'],
             ['app.custom_retry_listener' => null], // stdClass stub — enough to satisfy the alias target
         );
         $kernel->boot();

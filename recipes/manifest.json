@@ -6,6 +6,6 @@
         "config/": "%CONFIG_DIR%/"
     },
     "env": {
-        "POLI_PAGE_API_KEY": "pp_test_replace_me"
+        "POLI_PAGE_API_KEY": "pp_sandbox_replace_me"
     }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace PoliPage\Symfony;
 
+use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
+use Symfony\Component\Config\Definition\Builder\NodeDefinition;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
@@ -15,27 +17,9 @@ final class PoliPageBundle extends AbstractBundle
 
     public function configure(DefinitionConfigurator $definition): void
     {
-        $definition->rootNode()
+        self::arrayRoot($definition->rootNode())
             ->children()
-                ->scalarNode('api_key')
-                    ->isRequired()
-                    ->validate()
-                        // Why: env vars take a circuitous path. The validator
-                        // runs TWICE during MergeExtensionConfigurationPass —
-                        // once with the env placeholder (env_<hash>_NAME_<hash>)
-                        // and once with the resolved value (often '' when the
-                        // env is unset at compile time but will be set at
-                        // request time). Skip both placeholder-shaped and empty
-                        // values; the SDK will reject a truly-empty key at
-                        // construction. Reject only non-empty literal strings
-                        // that don't match the pp_test_/pp_live_ prefix.
-                        ->ifTrue(static fn (string $v): bool => '' !== $v
-                            && !str_contains($v, '%env(')
-                            && 1 !== preg_match('/^env_[a-f0-9]{16}_/i', $v)
-                            && 1 !== preg_match('/^pp_(test|live)_/', $v))
-                        ->thenInvalid('Poli Page API key must start with pp_test_ or pp_live_. Get one at https://app.poli.page/settings/api-keys. Got: %s')
-                    ->end()
-                ->end()
+                ->scalarNode('api_key')->isRequired()->end()
                 ->scalarNode('base_url')
                     ->defaultNull()
                     ->validate()
@@ -89,12 +73,26 @@ final class PoliPageBundle extends AbstractBundle
                 ->scalarNode('on_retry')->defaultNull()->end()
                 ->scalarNode('on_error')->defaultNull()->end()
                 ->arrayNode('exception_listener')
+                    ->info('Answers an uncaught PoliPageException with its toPayload() JSON body and status.')
                     ->addDefaultsIfNotSet()
                     ->children()
-                        ->booleanNode('enabled')->defaultFalse()->end()
+                        ->booleanNode('enabled')->defaultTrue()->end()
                     ->end()
                 ->end()
             ->end();
+    }
+
+    /**
+     * Why: Symfony 6.4 types rootNode() as NodeDefinition|ArrayNodeDefinition
+     * (7.x narrows it in PHPDoc), but the bundle's root is always an array
+     * node. Narrowing here, behind a NodeDefinition parameter, type-checks on
+     * both versions.
+     */
+    private static function arrayRoot(NodeDefinition $node): ArrayNodeDefinition
+    {
+        \assert($node instanceof ArrayNodeDefinition);
+
+        return $node;
     }
 
     /**

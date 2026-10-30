@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use PoliPage\PoliPage;
-use PoliPage\ProjectModeInput;
+use PoliPage\RenderInput;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -32,11 +32,10 @@ final class RenderToFileCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $path = sys_get_temp_dir().'/poli-page-demo-file.pdf';
 
-        renderToFile($this->client, new ProjectModeInput(
+        renderToFile($this->client, new RenderInput(
             project: 'getting-started',
             template: 'welcome',
             data: ['name' => 'renderToFile demo'],
-            version: '1.0.0',
         ), $path);
 
         $io->success(\sprintf('Wrote PDF to %s (%d bytes).', $path, filesize($path) ?: 0));

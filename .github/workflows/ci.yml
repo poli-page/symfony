@@ -16,62 +16,63 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: symfony-bundle
-      - uses: actions/checkout@v4
-        with:
-          repository: poli-page/sdk-php
-          path: sdk-php.md
-          ref: main
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
           coverage: none
+          # Global Symfony Flex is what reads extra.symfony.require (set by the
+          # next step); without it the pin is ignored and every leg resolves 7.x.
+          tools: flex
+        env:
+          fail-fast: true
       - name: Pin Symfony version
         working-directory: symfony-bundle
-        run: |
-          if [ -f composer.json ]; then
-            composer config extra.symfony.require "${{ matrix.symfony }}"
-          fi
-      - name: Install (two-step bootstrap for merge plugin)
+        run: composer config extra.symfony.require "${{ matrix.symfony }}"
+      - name: Install
         working-directory: symfony-bundle
+        run: composer update --prefer-dist --no-progress
+      - name: Symfony version under test
+        working-directory: symfony-bundle
+        env:
+          SYMFONY: ${{ matrix.symfony }}
         run: |
-          if [ -f composer.json ]; then
-            # Why: wikimedia/composer-merge-plugin must be installed before it
-            # can merge composer.local.json (which provides the local path repo
-            # for poli-page/sdk). Bootstrap in two steps: strip the SDK require,
-            # install (plugin lands), restore composer.json, update with merged
-            # repos. Remove this whole block once poli-page/sdk publishes.
-            cp composer.json composer.json.bak
-            php -r '$j=json_decode(file_get_contents("composer.json"),true);unset($j["require"]["poli-page/sdk"]);file_put_contents("composer.json",json_encode($j,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES)."\n");'
-            composer install --prefer-dist --no-progress --no-scripts
-            mv composer.json.bak composer.json
-            composer update --prefer-dist --no-progress
-          else
-            echo "Skipping install: no composer.json yet"
-          fi
+          # Fail when the pin did not take (e.g. Flex missing): the leg would
+          # otherwise test the wrong Symfony and still pass.
+          got=$(composer show symfony/framework-bundle | sed -n 's/^versions : \* v//p')
+          echo "symfony/framework-bundle $got (matrix $SYMFONY)"
+          case "$got" in
+            "${SYMFONY%.\*}".*) ;;
+            *) echo "::error::symfony/framework-bundle $got does not match $SYMFONY"; exit 1 ;;
+          esac
       - name: Lint
         working-directory: symfony-bundle
-        run: |
-          if [ -f .php-cs-fixer.dist.php ]; then
-            vendor/bin/php-cs-fixer check --diff
-          else
-            echo "Skipping lint: no .php-cs-fixer.dist.php yet"
-          fi
+        run: vendor/bin/php-cs-fixer check --diff
       - name: Static analysis
         working-directory: symfony-bundle
-        run: |
-          if [ -f phpstan.neon ]; then
-            vendor/bin/phpstan analyse --memory-limit=512M
-          else
-            echo "Skipping phpstan: no phpstan.neon yet"
-          fi
+        run: vendor/bin/phpstan analyse --memory-limit=512M
+      - name: API contract
+        id: contract
+        uses: poli-page/api-contract@0eba96c1ecf9a28b7e259f444f3ca5b7c059d5fd # v1.3.0
       - name: Unit tests
         working-directory: symfony-bundle
+        env:
+          POLI_CONTRACT: ${{ steps.contract.outputs.path }}
+        run: vendor/bin/phpunit --testsuite=unit
+      - name: Contract tests
+        working-directory: symfony-bundle
+        env:
+          POLI_CONTRACT: ${{ steps.contract.outputs.path }}
+        run: vendor/bin/phpunit --testsuite=contract --testdox
+      - name: Build the example app
+        # The example app requires Symfony 7.
+        if: matrix.symfony == '7.*'
+        working-directory: symfony-bundle/example-app
+        env:
+          # debug:router builds the app; nothing is sent to the API.
+          POLI_PAGE_API_KEY: pp_sandbox_0123456789abcdef0123456789abcdef
         run: |
-          if [ -d tests/Unit ] && [ -n "$(ls -A tests/Unit 2>/dev/null)" ]; then
-            vendor/bin/phpunit --testsuite=unit
-          else
-            echo "Skipping tests: no tests/Unit yet"
-          fi
+          composer update --prefer-dist --no-progress
+          bin/console debug:router error_not_found
 
   integration:
     runs-on: ubuntu-latest
@@ -80,22 +81,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: symfony-bundle
-      - uses: actions/checkout@v4
-        with:
-          repository: poli-page/sdk-php
-          path: sdk-php.md
-          ref: main
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-      - name: Install (two-step bootstrap)
+      - name: Install
         working-directory: symfony-bundle
         run: |
           if [ -f composer.json ]; then
-            cp composer.json composer.json.bak
-            php -r '$j=json_decode(file_get_contents("composer.json"),true);unset($j["require"]["poli-page/sdk"]);file_put_contents("composer.json",json_encode($j,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES)."\n");'
-            composer install --prefer-dist --no-progress --no-scripts
-            mv composer.json.bak composer.json
             composer update --prefer-dist --no-progress
           fi
       - name: Integration test against develop API

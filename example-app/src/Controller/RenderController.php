@@ -4,18 +4,19 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use PoliPage\InlineModeInput;
 use PoliPage\PoliPage;
-use PoliPage\ProjectModeInput;
+use PoliPage\RenderInput;
 use PoliPage\Symfony\Http\PoliPageResponseFactory;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\AsController;
 use Symfony\Component\Routing\Attribute\Route;
 
 use function PoliPage\renderToFile;
 
+// Why: Symfony before 7.3 does not make a class with #[Route] methods a controller service.
+#[AsController]
 final class RenderController
 {
     public function __construct(
@@ -32,11 +33,10 @@ final class RenderController
     #[Route('/render/pdf', name: 'render_pdf', methods: ['GET'])]
     public function pdf(): Response
     {
-        $pdf = $this->poliPage->render->pdf(new ProjectModeInput(
+        $pdf = $this->poliPage->render->pdf(new RenderInput(
             project: 'getting-started',
             template: 'welcome',
             data: ['name' => 'Symfony'],
-            version: '1.0.0',
         ));
 
         return $this->factory->bytes($pdf, 'welcome.pdf');
@@ -48,36 +48,13 @@ final class RenderController
     #[Route('/render/stream', name: 'render_stream', methods: ['GET'])]
     public function stream(): Response
     {
-        $stream = $this->poliPage->render->pdfStream(new ProjectModeInput(
+        $stream = $this->poliPage->render->pdfStream(new RenderInput(
             project: 'getting-started',
             template: 'welcome',
             data: ['name' => 'Symfony streamed'],
-            version: '1.0.0',
         ));
 
         return $this->factory->stream($stream, 'welcome-streamed.pdf');
-    }
-
-    /**
-     * Demo step 4: render->preview() — paginated HTML preview output.
-     * Accepts ?html=<raw html> for inline mode, otherwise project mode.
-     */
-    #[Route('/render/preview', name: 'render_preview', methods: ['GET'])]
-    public function preview(Request $request): Response
-    {
-        $html = $request->query->get('html');
-        $input = null !== $html
-            ? new InlineModeInput(template: (string) $html, data: ['name' => 'Inline'])
-            : new ProjectModeInput(
-                project: 'getting-started',
-                template: 'welcome',
-                data: ['name' => 'Preview from project'],
-                version: '1.0.0',
-            );
-
-        $result = $this->poliPage->render->preview($input);
-
-        return $this->factory->preview($result);
     }
 
     /**
@@ -91,11 +68,10 @@ final class RenderController
             mkdir(\dirname($output), 0o775, true);
         }
 
-        renderToFile($this->poliPage, new ProjectModeInput(
+        renderToFile($this->poliPage, new RenderInput(
             project: 'getting-started',
             template: 'welcome',
             data: ['name' => 'renderToFile demo'],
-            version: '1.0.0',
         ), $output);
 
         return new JsonResponse([
@@ -105,16 +81,15 @@ final class RenderController
     }
 
     /**
-     * Demo step 5: render->document() — store the document, return descriptor as JSON.
+     * Demo step 4: render->document() — store the document, return descriptor as JSON.
      */
     #[Route('/documents', name: 'document_create', methods: ['POST'])]
     public function createDocument(): JsonResponse
     {
-        $descriptor = $this->poliPage->render->document(new ProjectModeInput(
+        $descriptor = $this->poliPage->render->document(new RenderInput(
             project: 'getting-started',
             template: 'welcome',
             data: ['name' => 'Stored doc'],
-            version: '1.0.0',
         ));
 
         return new JsonResponse([

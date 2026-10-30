@@ -9,7 +9,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use PoliPage\DocumentDescriptor;
 use PoliPage\DocumentPreviewResult;
-use PoliPage\PreviewResult;
 use PoliPage\RenderMetadata;
 use PoliPage\Symfony\Http\PoliPageResponseFactory;
 use ReflectionClass;
@@ -119,21 +118,13 @@ final class PoliPageResponseFactoryTest extends TestCase
         self::assertSame('%PDF-1.7 streamed bytes', $emitted);
     }
 
-    public function testPreviewReturnsHtmlResponse(): void
-    {
-        $preview = new PreviewResult('<html>...</html>', 3, 'sandbox');
-        $response = $this->factory->preview($preview);
-
-        self::assertSame('text/html; charset=utf-8', $response->headers->get('Content-Type'));
-        self::assertSame('no-store, private', $response->headers->get('Cache-Control'));
-        self::assertSame('<html>...</html>', $response->getContent());
-    }
-
-    public function testPreviewAcceptsDocumentPreviewResult(): void
+    public function testPreviewReturnsStoredDocumentHtml(): void
     {
         $preview = new DocumentPreviewResult('<html>stored</html>', 5);
         $response = $this->factory->preview($preview);
 
+        self::assertSame('text/html; charset=utf-8', $response->headers->get('Content-Type'));
+        self::assertSame('no-store, private', $response->headers->get('Cache-Control'));
         self::assertSame('<html>stored</html>', $response->getContent());
     }
 
@@ -164,7 +155,6 @@ final class PoliPageResponseFactoryTest extends TestCase
             'projectSlug' => null,
             'templateId' => null,
             'templateSlug' => null,
-            'version' => null,
             'environment' => 'sandbox',
             'apiKeyId' => null,
             'format' => 'A4',

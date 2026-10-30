@@ -21,6 +21,7 @@ This bundle wires the Poli Page PHP SDK into Symfony's container, EventDispatche
 
 - PHP 8.3+
 - Symfony 6.4 LTS or 7.x
+- [`poli-page/sdk`](https://packagist.org/packages/poli-page/sdk) 0.11.0 or later (Composer installs it with the bundle)
 - A Poli Page API key from [app.poli.page](https://app.poli.page)
 
 ## Install
@@ -31,10 +32,18 @@ composer require poli-page/symfony-bundle
 
 With Symfony Flex the recipe registers the bundle, writes `config/packages/poli_page.yaml`, and appends `POLI_PAGE_API_KEY=` to `.env`. Without Flex, register the bundle in `config/bundles.php` and create the config file yourself (see [Configuration](#configuration)).
 
-Set your key in `.env.local`:
+Set your key in `.env.local`. Each key belongs to one environment of your organization, named in the key:
+
+| Environment                           | Key            | Watermark | Counted |
+| ------------------------------------- | -------------- | --------- | ------- |
+| `sandbox` (every org)                 | `pp_sandbox_…` | yes       | no      |
+| `live` (every org, deletable on Pro+) | `pp_live_…`    | no        | yes     |
+| created on Pro+ (e.g. `staging`)      | `pp_staging_…` | no        | yes     |
+
+"Counted" means the render counts toward the organization's monthly PDF quota. A render uses the project's copy published in the key's environment; there is no template version to pick.
 
 ```
-POLI_PAGE_API_KEY=pp_test_your_key_here
+POLI_PAGE_API_KEY=pp_sandbox_your_key_here
 ```
 
 Verify everything is wired end-to-end:
@@ -43,7 +52,6 @@ Verify everything is wired end-to-end:
 bin/console poli-page:render \
     --project=getting-started \
     --template=welcome \
-    --template-version=1.0.0 \
     --data='{"name":"World"}' \
     -o welcome.pdf
 ```
@@ -55,7 +63,7 @@ bin/console poli-page:render \
 namespace App\Controller;
 
 use PoliPage\PoliPage;
-use PoliPage\ProjectModeInput;
+use PoliPage\RenderInput;
 use PoliPage\Symfony\Http\PoliPageResponseFactory;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -70,11 +78,10 @@ final class InvoiceController
     #[Route('/invoice/{id}', methods: ['GET'])]
     public function show(string $id): Response
     {
-        $pdf = $this->poliPage->render->pdf(new ProjectModeInput(
+        $pdf = $this->poliPage->render->pdf(new RenderInput(
             project: 'invoices',
             template: 'default',
             data: ['invoice_id' => $id],
-            version: '1.0.0',
         ));
 
         return $this->factory->bytes($pdf, "invoice-{$id}.pdf");
@@ -86,7 +93,7 @@ final class InvoiceController
 
 | Option | Default | Description |
 |---|---|---|
-| `api_key` | _required_ | API key starting with `pp_test_` or `pp_live_`. |
+| `api_key` | _required_ | API key, `pp_{environment}_…` (see the key table above). Any non-empty value is accepted and the API decides; a value that does not look like `pp_{environment}_{32 hex}` logs one warning when the client is built. The warning names the expected format and shows no part of the key. |
 | `base_url` | SDK default | Override the API origin (must be http/https). |
 | `timeout` | SDK default | Per-request timeout in seconds (0 < t ≤ 600). |
 | `user_agent` | SDK default | Suffix appended to the SDK's User-Agent. |
@@ -98,6 +105,7 @@ final class InvoiceController
 | `logger` | `logger` | PSR-3 service id. |
 | `on_retry` | none | Service implementing `__invoke(RetryEvent)`. |
 | `on_error` | none | Service implementing `__invoke(PoliPageException)`. |
+| `exception_listener.enabled` | `true` | Answers an uncaught `PoliPageException` with its `toPayload()` JSON body and status (see [Errors](#errors)). Set to `false` to handle it yourself. |
 
 ```yaml
 # config/packages/poli_page.yaml
@@ -115,7 +123,7 @@ You inspect the resolved config with `bin/console debug:config poli_page`.
 | Symbol | Purpose |
 |---|---|
 | `PoliPage\PoliPage` | Autowired SDK client (`->render`, `->documents`). |
-| `PoliPage\Symfony\Http\PoliPageResponseFactory` | Builds `bytes` / `stream` / `preview` / `documentRedirect` responses with the right headers. |
+| `PoliPage\Symfony\Http\PoliPageResponseFactory` | Builds `bytes` / `stream` / `preview` (a stored document's HTML, `DocumentPreviewResult`) / `documentRedirect` responses with the right headers. |
 | `PoliPage\Symfony\Event\PoliPageRetryEvent` | Dispatched when the SDK retries a request. |
 | `PoliPage\Symfony\Event\PoliPageErrorEvent` | Dispatched when the SDK raises a `PoliPageException`. |
 | `PoliPage\Symfony\PoliPageBundle` | The bundle class registered in `config/bundles.php`. |
@@ -125,11 +133,36 @@ Full reference: [docs/api.md](docs/api.md).
 
 ## Errors
 
-The SDK throws `PoliPage\PoliPageException` (or a subclass). The bundle does not catch or transform them — you handle them in your controller, an event listener, or a Symfony exception subscriber. The four categories you typically discriminate on:
+### Exception listener
+
+The bundle registers a `kernel.exception` listener, on by default. A `PoliPage\PoliPageException` that your controller does not catch becomes a JSON answer built from the SDK's `toPayload()`:
+
+```json
+{ "code": "TEMPLATE_NOT_FOUND", "message": "Template 'does-not-exist' not found in project 'getting-started'.", "status": 404, "requestId": "req_…" }
+```
+
+- The HTTP status is the payload's `status`: the API's status (404, 429, 500, …), `503` for a `network_error` and `504` for a `timeout`. An SDK error with no status (for example `invalid_options`) answers `500`, with `"status": null` in the body.
+- `requestId` is the API's `x-request-id`, or `null` when there is none.
+- The `Content-Type` is `application/json`, with `Cache-Control: no-store, private`. The listener runs at priority `-10`, so Symfony still logs the exception first, and a listener of yours with a higher priority can answer instead.
+- If the response already started (a streamed PDF whose download fails midway), the listener writes nothing more: the client sees a truncated download rather than JSON appended to the PDF.
+- For a streamed PDF, call `render->pdfStream()` in the controller and pass its stream to `PoliPageResponseFactory::stream()`, which reads the first chunk before it returns. A render or download error then reaches the listener before any PDF header is sent. Calling the SDK inside your own `StreamedResponse` callback would commit a `200 application/pdf` first.
+
+To handle SDK errors yourself, turn it off:
+
+```yaml
+# config/packages/poli_page.yaml
+poli_page:
+    exception_listener:
+        enabled: false
+```
+
+### Exception types
+
+The SDK throws `PoliPage\PoliPageException` (or a subclass). Catch them in your controller where you want a different answer than the listener's. The four categories you typically discriminate on:
 
 - **Auth** — `PoliPage\Exception\AuthenticationException`. Invalid or missing API key.
 - **Rate limit** — `PoliPage\Exception\RateLimitException`. You hit the rate limit; retry per `Retry-After`.
-- **Request rejected** — `PoliPage\Exception\BadRequestException`. Template, data, or version rejected by the API.
+- **Request rejected** — `PoliPage\Exception\BadRequestException`. Template or data rejected by the API.
 - **Network / transport** — `PoliPage\Exception\ConnectionException` (includes `TimeoutException`). Connection failure, DNS, TLS, or timeout.
 
 ```php
@@ -161,7 +194,7 @@ try {
 
 ## Example app
 
-A runnable Symfony 7 app exercising every public method of the SDK lives in [`example-app/`](example-app/). It exposes an interactive dashboard at `http://127.0.0.1:8000/` with one button per SDK feature, plus the underlying JSON / PDF routes for scripted use.
+A runnable Symfony 7 app exercising every public method of the SDK lives in [`example-app/`](example-app/). It exposes an interactive dashboard at `http://127.0.0.1:8000/` with one button per SDK feature, plus the underlying JSON / PDF routes for scripted use (`GET /render/pdf`, `GET /documents/{id}`, `GET /errors/not-found`, …).
 
 ```bash
 cd example-app
@@ -186,7 +219,20 @@ Supported Symfony lines follow the upstream LTS schedule.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+```bash
+composer install
+composer ci            # php-cs-fixer, PHPStan and the unit tests
+```
+
+### Contract tests
+
+`tests/Contract/ImplContractTest.php` runs the integration cases of the Poli Page API contract (`impl.*` in [poli-page/api-contract](https://github.com/poli-page/api-contract)) against the example app, with its SDK pointed at a local mock API. CI runs them against the contract version pinned in `.github/workflows/ci.yml`. Locally:
+
+```bash
+POLI_CONTRACT=/path/to/contract.json vendor/bin/phpunit --testsuite=contract
+```
+
+Without `POLI_CONTRACT` the suite is skipped (it fails when `CI` is set). A case that must fail for now goes in `tests/contract-skip.json` with its reason.
 
 ## License
 

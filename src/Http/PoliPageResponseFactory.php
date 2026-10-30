@@ -6,7 +6,6 @@ namespace PoliPage\Symfony\Http;
 
 use PoliPage\DocumentDescriptor;
 use PoliPage\DocumentPreviewResult;
-use PoliPage\PreviewResult;
 use Psr\Http\Message\StreamInterface;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -28,8 +27,17 @@ final class PoliPageResponseFactory
 
     public function stream(StreamInterface $stream, string $filename = 'document.pdf', bool $inline = false): StreamedResponse
     {
-        $response = new StreamedResponse(static function () use ($stream): void {
+        if ($stream->isSeekable()) {
             $stream->rewind();
+        }
+        // Why: the first read happens here, before any header is sent, so a
+        // download error (DOWNLOAD_FAILED, network_error) reaches the exception
+        // listener, which answers JSON instead of a PDF response with no body.
+        $first = $stream->eof() ? '' : $stream->read(8192);
+
+        $response = new StreamedResponse(static function () use ($stream, $first): void {
+            echo $first;
+            flush();
             while (!$stream->eof()) {
                 echo $stream->read(8192);
                 flush();
@@ -48,7 +56,7 @@ final class PoliPageResponseFactory
         return $response;
     }
 
-    public function preview(PreviewResult|DocumentPreviewResult $preview): Response
+    public function preview(DocumentPreviewResult $preview): Response
     {
         return new Response($preview->html, Response::HTTP_OK, [
             'Content-Type' => 'text/html; charset=utf-8',

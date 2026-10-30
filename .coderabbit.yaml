@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
-# CodeRabbit config for poli-page repos. PRs here are mostly opened and fixed by automated agents
-# (the poli-page auto loop and issue pipeline), which read CodeRabbit's findings and its commit status.
+# CodeRabbit config for poli-page repos. PRs here are mostly opened and fixed by automated agents,
+# which read CodeRabbit's findings and its commit status.
 language: en-US
 early_access: false
 reviews:
@@ -78,7 +78,7 @@ reviews:
         tests must read the API key from the environment and never hardcode it.
     - path: "README.md"
       instructions: >-
-        Install steps, config keys, option names (e.g. --template-version) and code samples must
+        Install steps, config keys, option names (e.g. --project, --template) and code samples must
         match the actual code.
 knowledge_base:
   code_guidelines:

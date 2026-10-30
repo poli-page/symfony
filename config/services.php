@@ -8,6 +8,7 @@ use PoliPage\Symfony\Console\RenderCommand;
 use PoliPage\Symfony\EventListener\ErrorListener;
 use PoliPage\Symfony\EventListener\RetryListener;
 use PoliPage\Symfony\Http\PoliPageResponseFactory;
+use PoliPage\Symfony\PoliPageClientFactory;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpClient\Psr18Client;
 
@@ -47,6 +48,7 @@ return static function (ContainerConfigurator $container): void {
     // ─── PoliPage client ─────────────────────────────────────────────────────
 
     $services->set('poli_page.client', PoliPage::class)
+        ->factory([PoliPageClientFactory::class, 'create'])
         ->args([
             '$apiKey' => param('poli_page.api_key'),
             '$baseUrl' => param('poli_page.base_url'),
@@ -73,6 +75,6 @@ return static function (ContainerConfigurator $container): void {
     // ─── Console command ─────────────────────────────────────────────────────
 
     $services->set('poli_page.command.render', RenderCommand::class)
-        ->args([service('poli_page.client')])
+        ->args([service('poli_page.client'), param('poli_page.api_key')])
         ->tag('console.command');
 };

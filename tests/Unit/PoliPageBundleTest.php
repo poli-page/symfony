@@ -10,27 +10,20 @@ use PoliPage\Symfony\EventListener\PoliPageExceptionListener;
 use PoliPage\Symfony\Tests\Fixtures\TestKernel;
 use PoliPage\Symfony\Tests\RestoresGlobalHandlers;
 use ReflectionClass;
+use Symfony\Bundle\FrameworkBundle\Console\Application;
+use Symfony\Component\Console\Tester\CommandTester;
+use Symfony\Component\ErrorHandler\BufferingLogger;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpKernel\KernelEvents;
 
 final class PoliPageBundleTest extends TestCase
 {
     use RestoresGlobalHandlers;
 
-    public function testExceptionListenerIsNotRegisteredByDefault(): void
+    public function testExceptionListenerIsRegisteredByDefault(): void
     {
-        $kernel = new TestKernel(['api_key' => 'pp_test_x']);
-        $kernel->boot();
-
-        self::assertFalse($kernel->getContainer()->has('poli_page.exception_listener'));
-
-        $kernel->shutdown();
-    }
-
-    public function testExceptionListenerOptInRegistersService(): void
-    {
-        $kernel = new TestKernel([
-            'api_key' => 'pp_test_x',
-            'exception_listener' => ['enabled' => true],
-        ]);
+        $kernel = new TestKernel(['api_key' => TestKernel::API_KEY]);
         $kernel->boot();
 
         $container = $kernel->getContainer();
@@ -39,6 +32,67 @@ final class PoliPageBundleTest extends TestCase
             PoliPageExceptionListener::class,
             $container->get('poli_page.exception_listener'),
         );
+        self::assertTrue(self::listensToKernelExceptions($kernel));
+
+        $kernel->shutdown();
+    }
+
+    public function testExceptionListenerCanBeDisabled(): void
+    {
+        $kernel = new TestKernel([
+            'api_key' => TestKernel::API_KEY,
+            'exception_listener' => ['enabled' => false],
+        ]);
+        $kernel->boot();
+
+        self::assertFalse($kernel->getContainer()->has('poli_page.exception_listener'));
+        self::assertFalse(self::listensToKernelExceptions($kernel));
+
+        $kernel->shutdown();
+    }
+
+    private static function listensToKernelExceptions(TestKernel $kernel): bool
+    {
+        $dispatcher = $kernel->getContainer()->get('event_dispatcher');
+        self::assertInstanceOf(EventDispatcherInterface::class, $dispatcher);
+        foreach ($dispatcher->getListeners(KernelEvents::EXCEPTION) as $listener) {
+            if (\is_array($listener) && $listener[0] instanceof PoliPageExceptionListener) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * A key ending in a newline passes nyholm's header check, then Symfony
+     * HttpClient refuses it with the whole "Authorization: Bearer <key>"
+     * in the message. poli-page/sdk 0.11.0 refuses such a key with a fixed
+     * invalid_options message before building the request.
+     */
+    public function testRenderCommandNeverPrintsTheApiKeyOnTheDefaultTransport(): void
+    {
+        $kernel = new TestKernel([
+            'api_key' => TestKernel::API_KEY."\n",
+            'base_url' => 'http://127.0.0.1:9',
+            'retries' => ['max_attempts' => 0],
+            'logger' => 'app.test_logger',
+        ], ['app.test_logger' => BufferingLogger::class]);
+        $kernel->boot();
+
+        $tester = new CommandTester((new Application($kernel))->find('poli-page:render'));
+        $exitCode = $tester->execute([
+            '--project' => 'getting-started',
+            '--template' => 'welcome',
+            '--output' => sys_get_temp_dir().'/poli-page-render-test-'.uniqid().'.pdf',
+        ]);
+        $display = (string) preg_replace('/\s+/', '', $tester->getDisplay());
+
+        self::assertSame(3, $exitCode);
+        self::assertStringContainsString('apiKeycontainscharactersthatarenotallowedinanHTTPheader', $display);
+        self::assertStringContainsString('code=invalid_options', $display);
+        self::assertStringNotContainsString(substr(TestKernel::API_KEY, -32), $display);
+        self::assertStringNotContainsString('pp_sandbox_', $display);
 
         $kernel->shutdown();
     }
@@ -59,7 +113,7 @@ final class PoliPageBundleTest extends TestCase
 
     public function testPoliPageClientIsAutowireable(): void
     {
-        $kernel = new TestKernel(['api_key' => 'pp_test_resolves']);
+        $kernel = new TestKernel(['api_key' => TestKernel::API_KEY]);
         $kernel->boot();
 
         $container = $kernel->getContainer();
@@ -74,7 +128,7 @@ final class PoliPageBundleTest extends TestCase
     public function testCustomConfigReachesConstructor(): void
     {
         $kernel = new TestKernel([
-            'api_key' => 'pp_test_custom',
+            'api_key' => TestKernel::API_KEY,
             'base_url' => 'https://api.example.com',
             'timeout' => 42.0,
             'retries' => ['max_attempts' => 5, 'delay_seconds' => 0.1],
@@ -85,7 +139,7 @@ final class PoliPageBundleTest extends TestCase
         self::assertInstanceOf(PoliPage::class, $client);
 
         $reflection = new ReflectionClass($client);
-        self::assertSame('pp_test_custom', $reflection->getProperty('apiKey')->getValue($client));
+        self::assertSame(TestKernel::API_KEY, $reflection->getProperty('apiKey')->getValue($client));
         self::assertSame('https://api.example.com', $reflection->getProperty('baseUrl')->getValue($client));
         self::assertSame(42.0, $reflection->getProperty('defaultTimeout')->getValue($client));
         self::assertSame(5, $reflection->getProperty('maxRetries')->getValue($client));
