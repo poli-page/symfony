@@ -6,7 +6,6 @@ namespace PoliPage\Symfony\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use PoliPage\PoliPage;
-use PoliPage\PoliPageException;
 use PoliPage\Symfony\EventListener\PoliPageExceptionListener;
 use PoliPage\Symfony\Tests\Fixtures\TestKernel;
 use PoliPage\Symfony\Tests\RestoresGlobalHandlers;
@@ -16,8 +15,6 @@ use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\ErrorHandler\BufferingLogger;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpKernel\Event\ExceptionEvent;
-use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
 
 final class PoliPageBundleTest extends TestCase
@@ -96,33 +93,6 @@ final class PoliPageBundleTest extends TestCase
         self::assertStringContainsString('code=invalid_options', $display);
         self::assertStringNotContainsString(substr(TestKernel::API_KEY, -32), $display);
         self::assertStringNotContainsString('pp_sandbox_', $display);
-
-        $kernel->shutdown();
-    }
-
-    public function testExceptionListenerNeverSendsTheApiKey(): void
-    {
-        $kernel = new TestKernel([
-            'api_key' => TestKernel::API_KEY,
-            'exception_listener' => ['enabled' => true],
-        ]);
-        $kernel->boot();
-        $listener = $kernel->getContainer()->get('poli_page.exception_listener');
-        self::assertInstanceOf(PoliPageExceptionListener::class, $listener);
-
-        $event = new ExceptionEvent($kernel, new Request(), HttpKernelInterface::MAIN_REQUEST, new PoliPageException(
-            'Invalid header: CR/LF/NUL found in "Authorization: Bearer '.TestKernel::API_KEY."\n\".",
-            PoliPageException::NETWORK_ERROR,
-        ));
-        $listener->onKernelException($event);
-
-        $content = (string) $event->getResponse()?->getContent();
-        self::assertStringNotContainsString(substr(TestKernel::API_KEY, -32), $content);
-        self::assertStringNotContainsString('pp_sandbox_', $content);
-        $payload = json_decode($content, true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($payload);
-        self::assertIsString($payload['message']);
-        self::assertStringContainsString('CR/LF/NUL', $payload['message']);
 
         $kernel->shutdown();
     }

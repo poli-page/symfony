@@ -143,7 +143,8 @@ The bundle registers a `kernel.exception` listener, on by default. A `PoliPage\P
 
 - The HTTP status is the payload's `status`: the API's status (404, 429, 500, …), `503` for a `network_error` and `504` for a `timeout`. An SDK error with no status (for example `invalid_options`) answers `500`, with `"status": null` in the body.
 - `requestId` is the API's `x-request-id`, or `null` when there is none.
-- The `Content-Type` is `application/json`, with `Cache-Control: no-store, private`. Symfony still logs the exception as usual.
+- The `Content-Type` is `application/json`, with `Cache-Control: no-store, private`. The listener runs at priority `-10`, so Symfony still logs the exception first, and a listener of yours with a higher priority can answer instead.
+- If the response already started (a streamed PDF whose download fails midway), the listener writes nothing more: the client sees a truncated download rather than JSON appended to the PDF.
 - For a streamed PDF, call `render->pdfStream()` in the controller and pass its stream to `PoliPageResponseFactory::stream()`, which reads the first chunk before it returns. A render or download error then reaches the listener before any PDF header is sent. Calling the SDK inside your own `StreamedResponse` callback would commit a `200 application/pdf` first.
 
 To handle SDK errors yourself, turn it off:

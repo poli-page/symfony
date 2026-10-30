@@ -29,7 +29,7 @@ final class StreamErrorTest extends TestCase
             throw new PoliPageException('Failed to download PDF: network error', PoliPageException::DOWNLOAD_FAILED);
         }), 'report.pdf');
         $dispatcher = new EventDispatcher();
-        $dispatcher->addSubscriber(new PoliPageExceptionListener('pp_sandbox_0123456789abcdef0123456789abcdef'));
+        $dispatcher->addSubscriber(new PoliPageExceptionListener());
         $kernel = new HttpKernel($dispatcher, new class($controller) implements ControllerResolverInterface {
             public function __construct(private readonly Closure $controller)
             {
