@@ -11,9 +11,9 @@ use PoliPage\DocumentDescriptor;
 use PoliPage\DocumentPreviewResult;
 use PoliPage\RenderMetadata;
 use PoliPage\Symfony\Http\PoliPageResponseFactory;
+use Psr\Http\Message\StreamInterface;
 use ReflectionClass;
 use Symfony\Component\HttpFoundation\RedirectResponse;
-use Psr\Http\Message\StreamInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class PoliPageResponseFactoryTest extends TestCase
