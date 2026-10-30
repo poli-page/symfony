@@ -1,0 +1,16 @@
+# Packagist serves the GitHub archive of the tag as the dist, and the archive
+# leaves out every export-ignore path: the package ships src/, config/, the
+# README, the CHANGELOG and the LICENSE, and nothing used only to develop it.
+# recipes/ is the source of the Symfony Flex recipe, which Flex reads from
+# symfony/recipes-contrib, not from the package.
+/.github export-ignore
+/example-app export-ignore
+/recipes export-ignore
+/tests export-ignore
+/.coderabbit.yaml export-ignore
+/.gitattributes export-ignore
+/.gitignore export-ignore
+/.php-cs-fixer.dist.php export-ignore
+/phpstan.neon export-ignore
+/phpunit.xml.dist export-ignore
+/RELEASING.md export-ignore

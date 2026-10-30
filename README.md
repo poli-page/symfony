@@ -213,7 +213,7 @@ composer serve   # → http://127.0.0.1:8000
 
 | Bundle | Symfony | PHP |
 |---|---|---|
-| 0.1.x | 6.4 LTS / 7.x | 8.3 – 8.4 |
+| 0.11.x | 6.4 LTS / 7.x | 8.3 – 8.4 |
 
 Supported Symfony lines follow the upstream LTS schedule.
 

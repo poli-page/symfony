@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  # release.yml runs this whole workflow as the gate before the Packagist
+  # publish, so a release can never be approved on a commit CI would reject.
+  workflow_call:
 
 jobs:
   test:

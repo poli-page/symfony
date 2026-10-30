@@ -4,10 +4,16 @@
     "type": "symfony-bundle",
     "license": "MIT",
     "keywords": ["pdf", "html", "template", "rendering", "poli-page", "symfony", "bundle"],
-    "homepage": "https://github.com/poli-page/symfony-bundle",
+    "homepage": "https://github.com/poli-page/symfony",
+    "authors": [
+        {
+            "name": "Poli Page",
+            "homepage": "https://poli.page"
+        }
+    ],
     "support": {
-        "issues": "https://github.com/poli-page/symfony-bundle/issues",
-        "source": "https://github.com/poli-page/symfony-bundle",
+        "issues": "https://github.com/poli-page/symfony/issues",
+        "source": "https://github.com/poli-page/symfony",
         "docs": "https://docs.poli.page"
     },
     "require": {
