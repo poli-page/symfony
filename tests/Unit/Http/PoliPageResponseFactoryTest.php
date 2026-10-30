@@ -11,6 +11,7 @@ use PoliPage\DocumentDescriptor;
 use PoliPage\DocumentPreviewResult;
 use PoliPage\RenderMetadata;
 use PoliPage\Symfony\Http\PoliPageResponseFactory;
+use Psr\Http\Message\StreamInterface;
 use ReflectionClass;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -116,6 +117,35 @@ final class PoliPageResponseFactoryTest extends TestCase
         $response->sendContent();
         $emitted = (string) ob_get_clean();
         self::assertSame('%PDF-1.7 streamed bytes', $emitted);
+    }
+
+    public function testStreamSetsContentLengthWhenTheSizeIsKnown(): void
+    {
+        $response = $this->factory->stream($this->psr17->createStream('%PDF-1.7 abc'), 'sized.pdf');
+
+        self::assertSame('12', $response->headers->get('Content-Length'));
+    }
+
+    public function testStreamOmitsContentLengthWhenTheSizeIsUnknown(): void
+    {
+        $stream = self::createStub(StreamInterface::class);
+        $stream->method('getSize')->willReturn(-1);
+        $stream->method('eof')->willReturn(true);
+
+        $response = $this->factory->stream($stream, 'unsized.pdf');
+
+        self::assertFalse($response->headers->has('Content-Length'));
+    }
+
+    public function testStreamOmitsContentLengthWhenTheSizeIsNull(): void
+    {
+        $stream = self::createStub(StreamInterface::class);
+        $stream->method('getSize')->willReturn(null);
+        $stream->method('eof')->willReturn(true);
+
+        $response = $this->factory->stream($stream, 'unsized.pdf');
+
+        self::assertFalse($response->headers->has('Content-Length'));
     }
 
     public function testPreviewReturnsStoredDocumentHtml(): void

@@ -49,7 +49,8 @@ final class PoliPageResponseFactory
         $response->headers->set('X-Content-Type-Options', 'nosniff');
 
         $size = $stream->getSize();
-        if (null !== $size) {
+        // A download with no known length reports -1: sending that as Content-Length is invalid.
+        if (null !== $size && $size >= 0) {
             $response->headers->set('Content-Length', (string) $size);
         }
 
