@@ -17,3 +17,13 @@ parameters:
         # return type as unresolvable. The behaviour is verified by the test
         # suite itself; static analysis here is noise.
         - tests/Unit/Console/RenderCommandTest.php
+    ignoreErrors:
+        # Why: ExceptionEvent::isKernelTerminating() exists from Symfony 7.1, so
+        # the method_exists() check is always true on the 7.x legs and always
+        # false on the 6.4 legs. Only one of the two fires on a given leg.
+        -
+            identifiers:
+                - function.alreadyNarrowedType
+                - function.impossibleType
+            path: src/EventListener/PoliPageExceptionListener.php
+            reportUnmatched: false

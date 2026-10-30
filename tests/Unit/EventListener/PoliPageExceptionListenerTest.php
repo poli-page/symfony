@@ -110,10 +110,14 @@ final class PoliPageExceptionListenerTest extends TestCase
         self::assertNull($event->getResponse());
     }
 
-    public function testSubscribesToKernelException(): void
+    public function testSubscribesToKernelExceptionAndKernelResponse(): void
     {
-        // After FrameworkBundle logs the exception (priority 0), before its error page (-128).
-        self::assertSame(['kernel.exception' => ['onKernelException', -10]], PoliPageExceptionListener::getSubscribedEvents());
+        // After FrameworkBundle logs the exception (priority 0), before its error page (-128);
+        // the response is watched last, once every other listener has replaced it or not.
+        self::assertSame([
+            'kernel.exception' => ['onKernelException', -10],
+            'kernel.response' => ['onKernelResponse', -2048],
+        ], PoliPageExceptionListener::getSubscribedEvents());
     }
 
     private function makeEvent(Throwable $exception): ExceptionEvent

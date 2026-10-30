@@ -4,6 +4,9 @@ All notable changes to `poli-page/symfony-bundle` are documented here. Format fo
 
 ## [Unreleased]
 
+### Fixed
+- The exception listener decides per response whether output already started, instead of with the process-wide `headers_sent()`. In a long-running worker (RoadRunner, FrankenPHP worker mode), output sent earlier in the process made every later `PoliPageException` answer an empty `500`; it now answers its JSON payload. A streamed response whose callback throws, and (Symfony 7.1+) an error from a `kernel.terminate` listener, still get nothing appended.
+
 ## [0.11.0] - 2026-10-30
 
 First release on Packagist. The 0.1.0 development line was never published; the Changed, Removed and Fixed entries below describe changes made during that line.
