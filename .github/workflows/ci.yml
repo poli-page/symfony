@@ -19,7 +19,7 @@ jobs:
         php: ['8.3', '8.4']
         symfony: ['6.4.*', '7.*']
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: symfony-bundle
       - uses: shivammathur/setup-php@v2
@@ -96,7 +96,7 @@ jobs:
               echo "present=false" >> "$GITHUB_OUTPUT"
               ;;
           esac
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: steps.key.outputs.present == 'true'
         with:
           path: symfony-bundle
