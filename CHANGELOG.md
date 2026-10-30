@@ -4,6 +4,9 @@ All notable changes to `poli-page/symfony-bundle` are documented here. Format fo
 
 ## [Unreleased]
 
+### Changed
+- The live API CI job passes the optional `POLI_PAGE_BASE_URL` secret to the integration test (unset: the SDK default), next to the `pp_sandbox_` key in `POLI_PAGE_API_KEY`. The integration test sets `base_url` from `POLI_PAGE_BASE_URL` when it is set.
+
 ## [0.11.0] - 2026-10-30
 
 First release on Packagist. The 0.1.0 development line was never published; the Changed, Removed and Fixed entries below describe changes made during that line.
