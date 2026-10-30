@@ -4,6 +4,9 @@ All notable changes to `poli-page/symfony-bundle` are documented here. Format fo
 
 ## [Unreleased]
 
+### Changed
+- The live API CI job passes the optional `POLI_PAGE_BASE_URL` secret to the integration test (unset: the SDK default), next to the `pp_sandbox_` key in `POLI_PAGE_API_KEY`. The integration test sets `base_url` from `POLI_PAGE_BASE_URL` when it is set.
+
 ### Fixed
 - The exception listener decides per response whether output already started, instead of with the process-wide `headers_sent()`. In a long-running worker (RoadRunner, FrankenPHP worker mode), output sent earlier in the process made every later `PoliPageException` answer an empty `500`; it now answers its JSON payload. A streamed response whose callback throws, and (Symfony 7.1+) an error from a `kernel.terminate` listener, still get nothing appended.
 
