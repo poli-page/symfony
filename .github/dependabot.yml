@@ -1,0 +1,41 @@
+version: 2
+updates:
+  # The bundle's Composer dependencies, poli-page/sdk among them.
+  - package-ecosystem: composer
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(deps)"
+
+  # The example app's Composer dependencies.
+  - package-ecosystem: composer
+    directory: "/example-app"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(deps)"
+
+  # GitHub Actions in .github/workflows/*.yml.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      # Daily: a new API contract version (poli-page/api-contract) arrives as a PR the next day.
+      interval: daily
+    # Other action bumps wait 3 days after their release; the contract does not.
+    cooldown:
+      default-days: 3
+      exclude:
+        - "poli-page/api-contract"
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      # The API contract gets PRs of its own: its CI shows what the API change breaks.
+      api-contract:
+        patterns:
+          - "poli-page/api-contract"
+      actions:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "poli-page/api-contract"
