@@ -12,19 +12,19 @@
     },
     "require": {
         "php": "^8.3",
-        "symfony/config": "^6.4 || ^7.0",
-        "symfony/dependency-injection": "^6.4 || ^7.0",
-        "symfony/event-dispatcher": "^6.4 || ^7.0",
-        "symfony/http-client": "^6.4 || ^7.0",
-        "symfony/http-foundation": "^6.4 || ^7.0",
-        "symfony/http-kernel": "^6.4 || ^7.0",
-        "symfony/console": "^6.4 || ^7.0",
         "nyholm/psr7": "^1.8",
+        "poli-page/sdk": "^0.11.0",
         "psr/http-client": "^1.0",
         "psr/http-factory": "^1.0",
         "psr/http-message": "^1.1 || ^2.0",
         "psr/log": "^3.0",
-        "poli-page/sdk": "^0.10.0"
+        "symfony/config": "^6.4 || ^7.0",
+        "symfony/console": "^6.4 || ^7.0",
+        "symfony/dependency-injection": "^6.4 || ^7.0",
+        "symfony/event-dispatcher": "^6.4 || ^7.0",
+        "symfony/http-client": "^6.4 || ^7.0",
+        "symfony/http-foundation": "^6.4 || ^7.0",
+        "symfony/http-kernel": "^6.4 || ^7.0"
     },
     "require-dev": {
         "dg/bypass-finals": "^1.5",
@@ -36,6 +36,7 @@
         "phpunit/phpunit": "^11.0",
         "symfony/framework-bundle": "^6.4 || ^7.0",
         "symfony/phpunit-bridge": "^7.0",
+        "symfony/yaml": "^6.4 || ^7.0",
         "wikimedia/composer-merge-plugin": "^2.1"
     },
     "autoload": {

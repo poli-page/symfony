@@ -53,7 +53,7 @@ final class PoliPageBundleTest extends TestCase
     /**
      * A key ending in a newline passes nyholm's header check, then Symfony
      * HttpClient refuses it with the whole "Authorization: Bearer <key>"
-     * in the message. poli-page/sdk 0.10.0 refuses such a key with a fixed
+     * in the message. poli-page/sdk 0.11.0 refuses such a key with a fixed
      * invalid_options message before building the request.
      */
     public function testRenderCommandNeverPrintsTheApiKeyOnTheDefaultTransport(): void

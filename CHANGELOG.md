@@ -18,7 +18,7 @@ All notable changes to `poli-page/symfony-bundle` are documented here. Format fo
 - The Flex recipe seeds `POLI_PAGE_API_KEY=pp_sandbox_replace_me`.
 - The integration test runs only with a `pp_sandbox_…` key (renders in other environments count toward the monthly quota).
 - Example app: `GET /errors/bad-version` is replaced by `GET /errors/not-found`, which renders `getting-started` / `does-not-exist` and answers `404` with code `TEMPLATE_NOT_FOUND`; the demo steps follow the SDK demo's numbering.
-- Requires `poli-page/sdk` `^0.10.0`, the SDK release on the environments contract. `composer.local.json`, which pinned a local path to `0.1.0`, is removed.
+- Requires `poli-page/sdk` `^0.11.0` from Packagist, the first SDK release on the environments contract (environment keys, no template versions). `composer.local.json`, which pinned a local path to `0.1.0`, is removed.
 - `example-app/composer.json`: removed dead Symfony Flex `auto-scripts` hooks. Composer no longer warns on `composer install`.
 - `example-app/.env`: removed the placeholder `POLI_PAGE_API_KEY` value. Value now comes from the repo-root `.env` via `example-app/bootstrap.php`. A comment in the file explains the override hierarchy.
 

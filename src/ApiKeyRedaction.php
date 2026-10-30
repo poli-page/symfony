@@ -13,7 +13,7 @@ final class ApiKeyRedaction
 {
     /**
      * Why: a transport or PSR-7 error about the Authorization header can hold
-     * the whole "Bearer <key>" value (poli-page/sdk before 0.10.0 let a key
+     * the whole "Bearer <key>" value (older poli-page/sdk releases let a key
      * ending in a newline reach the HTTP layer, whose message echoes it).
      * Guzzle trims " \t" from the value first, so the trimmed key is redacted too.
      */
