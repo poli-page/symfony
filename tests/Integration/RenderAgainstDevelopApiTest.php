@@ -26,10 +26,6 @@ final class RenderAgainstDevelopApiTest extends TestCase
         }
 
         $config = ['api_key' => $key, 'timeout' => 30.0];
-        $testBaseUrl = getenv('POLI_PAGE_TEST_BASE_URL');
-        if (is_string($testBaseUrl) && '' !== $testBaseUrl) {
-            $config['base_url'] = $testBaseUrl;
-        }
         $kernel = new TestKernel($config);
         $kernel->boot();
 

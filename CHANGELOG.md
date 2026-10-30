@@ -14,6 +14,7 @@ All notable changes to `poli-page/symfony-bundle` are documented here. Format fo
 - `example-app/bootstrap.php` — loads the repo-root `.env` before Symfony Runtime starts, so the example app uses the same key as the test suite. Deliberately does not require `vendor/autoload.php`: Symfony Runtime must load it.
 
 ### Changed
+- CI: the live API job runs on `main` (and on demand) against the production API with the sandbox key from the `POLI_PAGE_API_KEY` secret, and skips with a notice when the key is absent or not a `pp_sandbox_` key.
 - **The exception listener is on by default** (`poli_page.exception_listener.enabled: true`). An uncaught `PoliPageException` answers its `toPayload()` body, `{ "code", "message", "status", "requestId" }`, as `application/json` with the payload's status (`503` for `network_error`, `504` for `timeout`, `500` when the SDK knows no status). The body's `status` is now `null` when the SDK knows none; it used to repeat the `500`. Set `exception_listener.enabled: false` to turn it off. The listener runs at priority `-10`, after FrameworkBundle logs the exception.
 - Example app: `GET /errors/not-found` lets the bundle's exception listener answer (`404` with the `toPayload()` body) instead of catching the error itself.
 - **Environment keys.** An API key is `pp_{environment}_{32 hex}` (`pp_sandbox_…`, `pp_live_…`, `pp_staging_…`). The `api_key` config node no longer checks the key's format, so keys for any environment boot. When the client is built, a key that does not match the SDK contract's full-key pattern logs one warning through `poli_page.logger` that names the expected format `pp_{environment}_{32 lowercase hex characters}` and shows no part of the key, not even its `pp_{environment}_` prefix; the API stays the only authority on keys. An empty key is still refused by the SDK.
@@ -31,6 +32,7 @@ All notable changes to `poli-page/symfony-bundle` are documented here. Format fo
 - Example app: `GET /render/preview` and its dashboard button. `GET /documents/{id}/preview` stays.
 
 ### Fixed
+- `PoliPageResponseFactory::stream()` no longer sends `Content-Length: -1` when the download has no known length; it sets the header only when the size is `>= 0`.
 - An empty `base_url` (for example `POLI_PAGE_BASE_URL=`) now means the SDK's default API URL. It was passed to the SDK as `''`, so every request went to a relative URL and failed as `network_error`.
 - A download that fails after the streamed PDF's headers and first bytes went out no longer gets the listener's JSON appended to the PDF body: the listener adds nothing, so the client sees a truncated download, and the exception is still logged.
 - `PoliPageResponseFactory::stream()` reads the first chunk before it returns, so a download that fails on its first read (`DOWNLOAD_FAILED`, `network_error`) reaches the exception listener and answers its JSON payload, instead of a `200` with PDF headers and no body.
