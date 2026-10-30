@@ -7,9 +7,9 @@ All notable changes to `poli-page/symfony-bundle` are documented here. Format fo
 ### Added
 - **Interactive demo UI** at `GET /` in the example app. Single-page editorial-style dashboard with one button per SDK feature, inline PDF/HTML previews via `<iframe>`, pretty-printed JSON for the documents and error endpoints, and copy-buttons for the CLI commands. No new dependencies (no Twig). Files: `example-app/src/Controller/DemoController.php`, `example-app/templates/demo.html`.
 - `composer serve` script in `example-app/composer.json` — runs PHP's built-in server on `127.0.0.1:8000`, removing the need for the optional Symfony CLI.
-- `tests/RestoresGlobalHandlers.php` trait — snapshots/restores global error/exception handler stack around kernel-booting tests (see CLAUDE.md §10.1).
+- `tests/RestoresGlobalHandlers.php` trait — snapshots/restores global error/exception handler stack around kernel-booting tests.
 - `tests/bootstrap.php` — replaces `vendor/autoload.php` as PHPUnit's bootstrap; loads the repo-root `.env` so integration tests pick up `POLI_PAGE_API_KEY` without a shell export.
-- `example-app/bootstrap.php` — loads the repo-root `.env` before Symfony Runtime starts, so the example app uses the same key as the test suite. Deliberately does not require `vendor/autoload.php` (see CLAUDE.md §10.3).
+- `example-app/bootstrap.php` — loads the repo-root `.env` before Symfony Runtime starts, so the example app uses the same key as the test suite. Deliberately does not require `vendor/autoload.php`: Symfony Runtime must load it.
 
 ### Changed
 - **Environment keys.** An API key is `pp_{environment}_{32 hex}` (`pp_sandbox_…`, `pp_live_…`, `pp_staging_…`). The `api_key` config node no longer checks the key's format, so keys for any environment boot. When the client is built, a key that does not match the SDK contract's full-key pattern logs one warning through `poli_page.logger` that names the expected format `pp_{environment}_{32 lowercase hex characters}` and shows no part of the key, not even its `pp_{environment}_` prefix; the API stays the only authority on keys. An empty key is still refused by the SDK.
