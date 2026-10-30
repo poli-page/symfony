@@ -111,6 +111,8 @@ final class ImplContractTest extends TestCase
             $this->setEnv('POLI_PAGE_BASE_URL', $mock->origin);
             $kernel = self::bootExampleApp();
             try {
+                // The contract's error cases go through the bundle's exception listener.
+                self::assertTrue($kernel->getContainer()->has('poli_page.exception_listener'), 'The example app turns off the exception listener (poli_page.exception_listener.enabled); the contract needs it on');
                 $request = self::object(self::substitute($case['request'] ?? null, $mock->origin), 'request');
                 self::onlyFields($request, self::REQUEST_FIELDS, 'request');
                 $client = new KernelBrowser($kernel);
