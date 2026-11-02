@@ -20,7 +20,7 @@ git archive HEAD | tar -t
 
 ## One-time setup (before the first release)
 
-`poli-page/symfony` was free on Packagist on 2026-11-02.
+`poli-page/symfony` was free on Packagist on 2026-11-02. Packagist never renames a package: if an entry from this repository exists under another name (it briefly did as `poli-page/symfony-bundle`), delete it on packagist.org before submitting.
 
 1. On packagist.org, signed in as the account that maintains `poli-page/sdk`, open <https://packagist.org/packages/submit> and submit `https://github.com/poli-page/symfony` (the repository's current URL: the release workflow pings Packagist with it). Packagist names the package from `composer.json`: `poli-page/symfony`. Do it **before** pushing the first tag: Packagist then lists only the `dev-*` branches, and `0.11.0` appears when the release workflow pings it.
 2. Leave the package without the GitHub auto-update hook (Packagist shows a "not auto-updated" notice; that is intended). If the Packagist account syncs GitHub repositories automatically, turn that off for this repository.
