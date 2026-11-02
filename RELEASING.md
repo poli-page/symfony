@@ -2,12 +2,16 @@
 
 The bundle is published on [Packagist](https://packagist.org) as **`poli-page/symfony`** from the repository `poli-page/symfony`, the same way as [`poli-page/sdk`](https://github.com/poli-page/sdk-php). Packagist has no upload: it reads the repository, and the version comes from the git tag, so `composer.json` has no `version` field.
 
+## Versions
+
+`poli-page/symfony` shares its major.minor with the Poli Page API: bundle `0.13.x` talks to API `0.13`, passes the [API contract](https://github.com/poli-page/api-contract) `v0.13.0`, and requires `poli-page/sdk` of the same minor (`^0.13.0`, which Composer reads as `>=0.13.0 <0.14`). Patch numbers are free: a fix to the bundle alone is a patch, whatever the API's or the SDK's patch. A change of the API contract, a new feature, and a raise of the minimum PHP or Symfony version are each a minor. The bundle may skip minors when it has nothing to ship for one. The Release workflow refuses a tag whose major.minor differs from the contract version pinned in `.github/workflows/ci.yml` or from the `poli-page/sdk` constraint in `composer.json` and `example-app/composer.json`.
+
 ## How a release runs
 
 Pushing a tag `vX.Y.Z` (or a prerelease `vX.Y.Z-rc1`) starts `.github/workflows/release.yml`:
 
 1. **test**: the whole `ci.yml` matrix on the tagged commit (PHP-CS-Fixer, PHPStan, unit tests, the API contract suite with the pinned `poli-page/api-contract`, the example-app build).
-2. **Version matches tag**: `composer validate --strict`, no `version` field in `composer.json`, a `## [X.Y.Z]` section in `CHANGELOG.md`, and the example app's path-repository version of `poli-page/symfony` equal to the tag.
+2. **Version matches tag**: `composer validate --strict`, no `version` field in `composer.json`, a `## [X.Y.Z]` section in `CHANGELOG.md`, the example app's path-repository version of `poli-page/symfony` equal to the tag, and `scripts/check-release-versions.sh`: the pinned API contract commit must carry a stable tag `vX.Y.Z` of the tag's major.minor (the `# vX.Y.Z` comment next to the pin is not trusted), and `poli-page/sdk` must be required as `^X.Y` of the tag's major.minor. The error names both versions.
 3. **Publish to Packagist**: waits in the `packagist-release` environment until a reviewer approves, then calls Packagist's `update-package` API with the `PACKAGIST_USERNAME` and `PACKAGIST_API_TOKEN` secrets, and creates the GitHub Release with the CHANGELOG section as notes.
 
 The approval is the publish: Packagist indexes the tag when the workflow pings it. Do not install the Packagist auto-update webhook on this repository, or the tag push alone would publish it before tests and approval. Packagist also re-crawls packages without a webhook from time to time, so approve (or delete the tag) soon after the checks finish.
@@ -22,7 +26,7 @@ git archive HEAD | tar -t
 
 `poli-page/symfony` was free on Packagist on 2026-11-02. Packagist never renames a package: if an entry from this repository exists under another name (it briefly did as `poli-page/symfony-bundle`), delete it on packagist.org before submitting.
 
-1. On packagist.org, signed in as the account that maintains `poli-page/sdk`, open <https://packagist.org/packages/submit> and submit `https://github.com/poli-page/symfony` (the repository's current URL: the release workflow pings Packagist with it). Packagist names the package from `composer.json`: `poli-page/symfony`. Do it **before** pushing the first tag: Packagist then lists only the `dev-*` branches, and `0.11.0` appears when the release workflow pings it.
+1. On packagist.org, signed in as the account that maintains `poli-page/sdk`, open <https://packagist.org/packages/submit> and submit `https://github.com/poli-page/symfony` (the repository's current URL: the release workflow pings Packagist with it). Packagist names the package from `composer.json`: `poli-page/symfony`. Do it **before** pushing the first tag: Packagist then lists only the `dev-*` branches, and `0.13.0` appears when the release workflow pings it.
 2. Leave the package without the GitHub auto-update hook (Packagist shows a "not auto-updated" notice; that is intended). If the Packagist account syncs GitHub repositories automatically, turn that off for this repository.
 3. In GitHub, `poli-page/symfony` → Settings → Environments → **New environment** `packagist-release`:
    - Required reviewers: the release owner(s).
@@ -37,6 +41,7 @@ git archive HEAD | tar -t
    - Move `[Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] - YYYY-MM-DD`, leave an empty `## [Unreleased]` above it, and update the compare links at the bottom.
    - Set the example app's version of the package to `X.Y.Z`: `repositories[0].options.versions["poli-page/symfony"]` in `example-app/composer.json`, and the two `v…` labels in `example-app/templates/demo.html`.
    - Update the compatibility table in `README.md` when the minor version or the supported Symfony/PHP versions change.
+   - For a new minor `X.Y`: require `poli-page/sdk` `^X.Y.0` in `composer.json` and `example-app/composer.json`, pin the API contract's `vX.Y.Z` commit in `.github/workflows/ci.yml`, and check both with `./scripts/check-release-versions.sh X.Y.Z` (it needs `jq` and network access to list the contract's tags).
 2. Open a PR, wait for CI to be green, merge it.
 3. Tag the merge commit on `main` and push the tag:
 
@@ -53,4 +58,4 @@ A failed check before the approval publishes nothing: fix it on `main`, delete t
 
 ## Symfony Flex recipe
 
-`recipes/` holds the source of the Flex recipe (register the bundle, add `config/packages/poli_page.yaml`, add `POLI_PAGE_API_KEY` to `.env`). Flex reads recipes from [`symfony/recipes-contrib`](https://github.com/symfony/recipes-contrib), not from the package, so after the first release on Packagist submit it there as `poli-page/symfony/0.11/` (steps in [`recipes/README.md`](recipes/README.md)). Until it is merged, users register the bundle and add the config by hand, as the README shows.
+`recipes/` holds the source of the Flex recipe (register the bundle, add `config/packages/poli_page.yaml`, add `POLI_PAGE_API_KEY` to `.env`). Flex reads recipes from [`symfony/recipes-contrib`](https://github.com/symfony/recipes-contrib), not from the package, so after the first release on Packagist submit it there as `poli-page/symfony/0.13/` (steps in [`recipes/README.md`](recipes/README.md)). Until it is merged, users register the bundle and add the config by hand, as the README shows.

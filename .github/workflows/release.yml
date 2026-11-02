@@ -73,6 +73,14 @@ jobs:
           fi
           echo "Tag matches the CHANGELOG and the example app: $version"
 
+      # The bundle shares its major.minor with the Poli Page API: a release
+      # X.Y.z must pass the API contract X.Y and require poli-page/sdk ^X.Y.
+      # The script reads the contract commit ci.yml pins, requires a stable
+      # contract tag vX.Y.Z on it with the tag's major.minor, and checks the
+      # poli-page/sdk constraint of the bundle and the example app.
+      - name: Pinned API contract and required SDK match the tag's major.minor
+        run: ./scripts/check-release-versions.sh "${GITHUB_REF_NAME}"
+
   publish:
     name: Publish to Packagist
     needs: [test, validate-version]

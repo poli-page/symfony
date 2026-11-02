@@ -4,15 +4,9 @@ All notable changes to `poli-page/symfony` are documented here. Format follows [
 
 ## [Unreleased]
 
-### Changed
-- The live API CI job passes the optional `POLI_PAGE_BASE_URL` secret to the integration test (unset: the SDK default), next to the `pp_sandbox_` key in `POLI_PAGE_API_KEY`. The integration test sets `base_url` from `POLI_PAGE_BASE_URL` when it is set.
+## [0.13.0] - 2026-11-02
 
-### Fixed
-- The exception listener decides per response whether output already started, instead of with the process-wide `headers_sent()`. In a long-running worker (RoadRunner, FrankenPHP worker mode), output sent earlier in the process made every later `PoliPageException` answer an empty `500`; it now answers its JSON payload. A streamed response whose callback throws, and (Symfony 7.1+) an error from a `kernel.terminate` listener, still get nothing appended.
-
-## [0.11.0] - 2026-10-30
-
-First release on Packagist. The 0.1.0 development line was never published; the Changed, Removed and Fixed entries below describe changes made during that line.
+First release on Packagist. It requires `poli-page/sdk` 0.13 and passes the Poli Page API contract v0.13.0. The bundle shares its major.minor with the Poli Page API, so its first version is 0.13.0; a 0.11.0 was prepared and never published, and neither was the 0.1.0 development line. The Changed, Removed and Fixed entries below describe changes made during those lines.
 
 ### Added
 - Modern `AbstractBundle` with full config tree covering every `PoliPage` constructor option.
@@ -22,8 +16,9 @@ First release on Packagist. The 0.1.0 development line was never published; the 
 - Symfony EventDispatcher integration for the SDK's `onRetry` / `onError` Closure hooks (`PoliPageRetryEvent`, `PoliPageErrorEvent`).
 - Symfony Flex recipe source in `recipes/`, to be submitted to `symfony/recipes-contrib` (until it is accepted, register the bundle by hand as the README shows).
 - Example Symfony 7 app at `example-app/` covering the SDK demo steps.
-- Contract tests: CI runs the integration cases of the Poli Page API contract v1.3.0 (`poli-page/api-contract`) against the example app on every matrix leg, and builds the example app on the Symfony 7 legs.
+- Contract tests: CI runs the integration cases of the Poli Page API contract v0.13.0 (`poli-page/api-contract`), including `impl.invalid-response`, against the example app on every matrix leg, and builds the example app on the Symfony 7 legs.
 - Dependabot for Composer (the bundle and the example app) and GitHub Actions; the API contract has its own group and no cooldown.
+- Release workflow: the tag's major.minor must be the pinned API contract's (a stable contract tag on the pinned commit, not the comment next to it) and the required `poli-page/sdk`'s (`scripts/check-release-versions.sh`); the error names both versions.
 - **Interactive demo UI** at `GET /` in the example app. Single-page editorial-style dashboard with one button per SDK feature, inline PDF/HTML previews via `<iframe>`, pretty-printed JSON for the documents and error endpoints, and copy-buttons for the CLI commands. No new dependencies (no Twig). Files: `example-app/src/Controller/DemoController.php`, `example-app/templates/demo.html`.
 - `composer serve` script in `example-app/composer.json` — runs PHP's built-in server on `127.0.0.1:8000`, removing the need for the optional Symfony CLI.
 - `tests/RestoresGlobalHandlers.php` trait — snapshots/restores global error/exception handler stack around kernel-booting tests.
@@ -31,8 +26,10 @@ First release on Packagist. The 0.1.0 development line was never published; the 
 - `example-app/bootstrap.php` — loads the repo-root `.env` before Symfony Runtime starts, so the example app uses the same key as the test suite. Deliberately does not require `vendor/autoload.php`: Symfony Runtime must load it.
 
 ### Changed
+- Requires `poli-page/sdk` `^0.13.0` (`>=0.13.0 <0.14`). With it, a 2xx from the API whose body is not JSON (usually from a proxy) raises `InvalidResponseException`, code `invalid_response` (was `INTERNAL_ERROR`), which the exception listener answers `502`; a `renderToFile()` that cannot write its file raises `io_error` (was `invalid_options`), answered `500` with `"status": null`; and the PDF download is bounded by the `timeout` option (an idle timeout for `pdfStream()`).
+- The live API CI job passes the optional `POLI_PAGE_BASE_URL` secret to the integration test (unset: the SDK default), next to the `pp_sandbox_` key in `POLI_PAGE_API_KEY`. The integration test sets `base_url` from `POLI_PAGE_BASE_URL` when it is set.
 - CI: the live API job runs on `main` (and on demand) against the production API with the sandbox key from the `POLI_PAGE_API_KEY` secret, and skips with a notice when the key is absent or not a `pp_sandbox_` key.
-- **The exception listener is on by default** (`poli_page.exception_listener.enabled: true`). An uncaught `PoliPageException` answers its `toPayload()` body, `{ "code", "message", "status", "requestId" }`, as `application/json` with the payload's status (`503` for `network_error`, `504` for `timeout`, `500` when the SDK knows no status). The body's `status` is now `null` when the SDK knows none; it used to repeat the `500`. Set `exception_listener.enabled: false` to turn it off. The listener runs at priority `-10`, after FrameworkBundle logs the exception.
+- **The exception listener is on by default** (`poli_page.exception_listener.enabled: true`). An uncaught `PoliPageException` answers its `toPayload()` body, `{ "code", "message", "status", "requestId" }`, as `application/json` with the payload's status (`503` for `network_error`, `504` for `timeout`, `502` for `invalid_response`, `500` when the SDK knows no status, as for `invalid_options` and `io_error`). The body's `status` is now `null` when the SDK knows none; it used to repeat the `500`. Set `exception_listener.enabled: false` to turn it off. The listener runs at priority `-10`, after FrameworkBundle logs the exception.
 - Example app: `GET /errors/not-found` lets the bundle's exception listener answer (`404` with the `toPayload()` body) instead of catching the error itself.
 - **Environment keys.** An API key is `pp_{environment}_{32 hex}` (`pp_sandbox_…`, `pp_live_…`, `pp_staging_…`). The `api_key` config node no longer checks the key's format, so keys for any environment boot. When the client is built, a key that does not match the SDK contract's full-key pattern logs one warning through `poli_page.logger` that names the expected format `pp_{environment}_{32 lowercase hex characters}` and shows no part of the key, not even its `pp_{environment}_` prefix; the API stays the only authority on keys. An empty key is still refused by the SDK.
 - **Template versions are gone.** Renders use the project's copy published in the key's environment: `poli-page:render`, the example app, the README and the integration test build a `RenderInput` with no `version`.
@@ -40,7 +37,7 @@ First release on Packagist. The 0.1.0 development line was never published; the 
 - The Flex recipe seeds `POLI_PAGE_API_KEY=pp_sandbox_replace_me`.
 - The integration test runs only with a `pp_sandbox_…` key (renders in other environments count toward the monthly quota).
 - Example app: `GET /errors/bad-version` is replaced by `GET /errors/not-found`, which renders `getting-started` / `does-not-exist` and answers `404` with code `TEMPLATE_NOT_FOUND`; the demo steps follow the SDK demo's numbering.
-- Requires `poli-page/sdk` `^0.11.0` from Packagist, the first SDK release on the environments contract (environment keys, no template versions). `composer.local.json`, which pinned a local path to `0.1.0`, is removed.
+- `composer.local.json`, which pinned a local path to the SDK, is removed: the bundle requires `poli-page/sdk` from Packagist.
 - `example-app/composer.json`: removed dead Symfony Flex `auto-scripts` hooks. Composer no longer warns on `composer install`.
 - `example-app/.env`: removed the placeholder `POLI_PAGE_API_KEY` value. Value now comes from the repo-root `.env` via `example-app/bootstrap.php`. A comment in the file explains the override hierarchy.
 
@@ -49,6 +46,7 @@ First release on Packagist. The 0.1.0 development line was never published; the 
 - Example app: `GET /render/preview` and its dashboard button. `GET /documents/{id}/preview` stays.
 
 ### Fixed
+- The exception listener decides per response whether output already started, instead of with the process-wide `headers_sent()`. In a long-running worker (RoadRunner, FrankenPHP worker mode), output sent earlier in the process made every later `PoliPageException` answer an empty `500`; it now answers its JSON payload. A streamed response whose callback throws, and (Symfony 7.1+) an error from a `kernel.terminate` listener, still get nothing appended.
 - `PoliPageResponseFactory::stream()` no longer sends `Content-Length: -1` when the download has no known length; it sets the header only when the size is `>= 0`.
 - An empty `base_url` (for example `POLI_PAGE_BASE_URL=`) now means the SDK's default API URL. It was passed to the SDK as `''`, so every request went to a relative URL and failed as `network_error`.
 - A download that fails after the streamed PDF's headers and first bytes went out no longer gets the listener's JSON appended to the PDF body: the listener adds nothing, so the client sees a truncated download, and the exception is still logged.
@@ -60,5 +58,5 @@ First release on Packagist. The 0.1.0 development line was never published; the 
 - `composer install` in `example-app/` no longer errors with "non-existent script @auto-scripts" on PHP 8.5+.
 - `PoliPageResponseFactory::bytes()` / `stream()`: control characters (CR/LF, TAB, DEL, C1) are now stripped from the `Content-Disposition` filename instead of surviving as `?` in the fallback and `%0D%0A` in `filename*`. Filenames containing `/`, `\` or `%` no longer throw `InvalidArgumentException` from `HeaderUtils::makeDisposition()` (a 500): path separators become `_`, and `%` becomes `?` in the ASCII fallback only. The fallback now has one `?` per non-ASCII character (was one per UTF-8 byte), and a filename made only of control characters falls back to `document.pdf`.
 
-[Unreleased]: https://github.com/poli-page/symfony/compare/v0.11.0...HEAD
-[0.11.0]: https://github.com/poli-page/symfony/releases/tag/v0.11.0
+[Unreleased]: https://github.com/poli-page/symfony/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/poli-page/symfony/releases/tag/v0.13.0

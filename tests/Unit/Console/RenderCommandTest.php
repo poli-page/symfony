@@ -183,7 +183,7 @@ final class RenderCommandTest extends TestCase
     /**
      * The `request_factory` option accepts a Guzzle PSR-17 factory, whose
      * header check throws with the whole "Bearer <key>" value in its message.
-     * poli-page/sdk 0.11.0 refuses such a key with a fixed invalid_options
+     * poli-page/sdk 0.13 refuses such a key with a fixed invalid_options
      * message before the factory sees it.
      */
     #[DataProvider('headerBreakingSuffixProvider')]

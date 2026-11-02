@@ -19,7 +19,7 @@
     "require": {
         "php": "^8.3",
         "nyholm/psr7": "^1.8",
-        "poli-page/sdk": "^0.11.0",
+        "poli-page/sdk": "^0.13.0",
         "psr/http-client": "^1.0",
         "psr/http-factory": "^1.0",
         "psr/http-message": "^1.1 || ^2.0",
