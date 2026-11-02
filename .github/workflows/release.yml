@@ -66,9 +66,9 @@ jobs:
             echo "::error::CHANGELOG.md has no '## [${version}]' section"
             exit 1
           fi
-          example="$(jq -r '.repositories[] | select(.type == "path") | .options.versions["poli-page/symfony-bundle"]' example-app/composer.json)"
+          example="$(jq -r '.repositories[] | select(.type == "path") | .options.versions["poli-page/symfony"]' example-app/composer.json)"
           if [ "$example" != "$version" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} does not match the example app's poli-page/symfony-bundle version ($example)"
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match the example app's poli-page/symfony version ($example)"
             exit 1
           fi
           echo "Tag matches the CHANGELOG and the example app: $version"

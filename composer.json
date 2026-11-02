@@ -1,5 +1,5 @@
 {
-    "name": "poli-page/symfony-bundle",
+    "name": "poli-page/symfony",
     "description": "Symfony bundle for the Poli Page PDF rendering API",
     "type": "symfony-bundle",
     "license": "MIT",

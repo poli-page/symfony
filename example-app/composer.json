@@ -1,6 +1,6 @@
 {
-    "name": "poli-page/symfony-bundle-example",
-    "description": "Example Symfony app demonstrating poli-page/symfony-bundle. Not published.",
+    "name": "poli-page/symfony-example",
+    "description": "Example Symfony app demonstrating poli-page/symfony. Not published.",
     "type": "project",
     "license": "MIT",
     "require": {
@@ -8,12 +8,12 @@
         "symfony/framework-bundle": "^7.0",
         "symfony/runtime": "^7.0",
         "symfony/yaml": "^7.0",
-        "poli-page/symfony-bundle": "@dev",
+        "poli-page/symfony": "@dev",
         "poli-page/sdk": "^0.11.0",
         "symfony/dotenv": "^7.0"
     },
     "repositories": [
-        { "type": "path", "url": "../", "options": { "symlink": true, "versions": { "poli-page/symfony-bundle": "0.11.0" } } }
+        { "type": "path", "url": "../", "options": { "symlink": true, "versions": { "poli-page/symfony": "0.11.0" } } }
     ],
     "config": {
         "allow-plugins": {
