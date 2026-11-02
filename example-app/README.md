@@ -1,4 +1,4 @@
-# `poli-page/symfony-bundle` example app
+# `poli-page/symfony` example app
 
 Minimal Symfony 7 app demonstrating every public method of the Poli Page PHP SDK through the Symfony bundle. Each route or command corresponds 1:1 to a step in the SDK's canonical demo ([`examples/demo.php`](https://github.com/poli-page/sdk-php/blob/main/examples/demo.php)).
 

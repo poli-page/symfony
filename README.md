@@ -27,7 +27,7 @@ This bundle wires the Poli Page PHP SDK into Symfony's container, EventDispatche
 ## Install
 
 ```bash
-composer require poli-page/symfony-bundle
+composer require poli-page/symfony
 ```
 
 Register the bundle in `config/bundles.php`:

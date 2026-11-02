@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          path: symfony-bundle
+          path: symfony
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
@@ -32,13 +32,13 @@ jobs:
         env:
           fail-fast: true
       - name: Pin Symfony version
-        working-directory: symfony-bundle
+        working-directory: symfony
         run: composer config extra.symfony.require "${{ matrix.symfony }}"
       - name: Install
-        working-directory: symfony-bundle
+        working-directory: symfony
         run: composer update --prefer-dist --no-progress
       - name: Symfony version under test
-        working-directory: symfony-bundle
+        working-directory: symfony
         env:
           SYMFONY: ${{ matrix.symfony }}
         run: |
@@ -51,28 +51,28 @@ jobs:
             *) echo "::error::symfony/framework-bundle $got does not match $SYMFONY"; exit 1 ;;
           esac
       - name: Lint
-        working-directory: symfony-bundle
+        working-directory: symfony
         run: vendor/bin/php-cs-fixer check --diff
       - name: Static analysis
-        working-directory: symfony-bundle
+        working-directory: symfony
         run: vendor/bin/phpstan analyse --memory-limit=512M
       - name: API contract
         id: contract
         uses: poli-page/api-contract@0eba96c1ecf9a28b7e259f444f3ca5b7c059d5fd # v1.3.0
       - name: Unit tests
-        working-directory: symfony-bundle
+        working-directory: symfony
         env:
           POLI_CONTRACT: ${{ steps.contract.outputs.path }}
         run: vendor/bin/phpunit --testsuite=unit
       - name: Contract tests
-        working-directory: symfony-bundle
+        working-directory: symfony
         env:
           POLI_CONTRACT: ${{ steps.contract.outputs.path }}
         run: vendor/bin/phpunit --testsuite=contract --testdox
       - name: Build the example app
         # The example app requires Symfony 7.
         if: matrix.symfony == '7.*'
-        working-directory: symfony-bundle/example-app
+        working-directory: symfony/example-app
         env:
           # debug:router builds the app; nothing is sent to the API.
           POLI_PAGE_API_KEY: pp_sandbox_0123456789abcdef0123456789abcdef
@@ -99,21 +99,21 @@ jobs:
       - uses: actions/checkout@v4
         if: steps.key.outputs.present == 'true'
         with:
-          path: symfony-bundle
+          path: symfony
       - uses: shivammathur/setup-php@v2
         if: steps.key.outputs.present == 'true'
         with:
           php-version: '8.3'
       - name: Install
         if: steps.key.outputs.present == 'true'
-        working-directory: symfony-bundle
+        working-directory: symfony
         run: |
           if [ -f composer.json ]; then
             composer update --prefer-dist --no-progress
           fi
       - name: Live API test (sandbox key)
         if: steps.key.outputs.present == 'true'
-        working-directory: symfony-bundle
+        working-directory: symfony
         env:
           POLI_PAGE_API_KEY: ${{ secrets.POLI_PAGE_API_KEY }}
           POLI_PAGE_BASE_URL: ${{ secrets.POLI_PAGE_BASE_URL }}
