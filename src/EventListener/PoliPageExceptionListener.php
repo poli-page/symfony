@@ -18,8 +18,9 @@ use WeakMap;
 /**
  * Answers a PoliPageException thrown in a controller the way every Poli Page
  * integration does: status `toPayload()['status']` (503 for network_error,
- * 504 for timeout, 500 when the SDK knows none) and the body `toPayload()`:
- * `{ code, message, status, requestId }`. On by default; turned off with
+ * 504 for timeout, 502 for invalid_response, 500 when the SDK knows none)
+ * and the body `toPayload()`: `{ code, message, status, requestId }`. On by
+ * default; turned off with
  * `poli_page.exception_listener.enabled: false`.
  */
 final class PoliPageExceptionListener implements EventSubscriberInterface

@@ -7,6 +7,7 @@ namespace PoliPage\Symfony\Tests\Unit\EventListener;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 use PoliPage\Exception\ConnectionException;
+use PoliPage\Exception\InvalidResponseException;
 use PoliPage\Exception\TimeoutException;
 use PoliPage\PoliPageException;
 use PoliPage\Symfony\EventListener\PoliPageExceptionListener;
@@ -96,6 +97,47 @@ final class PoliPageExceptionListenerTest extends TestCase
             'code' => 'timeout',
             'message' => 'Request timed out after 60000ms',
             'status' => 504,
+            'requestId' => null,
+        ], json_decode((string) $response->getContent(), true));
+    }
+
+    public function testAnInvalidResponseAnswers502NotItsSuccessStatus(): void
+    {
+        $listener = new PoliPageExceptionListener();
+        $event = $this->makeEvent(new InvalidResponseException(
+            'Invalid response: HTTP 200 body is not JSON',
+            PoliPageException::INVALID_RESPONSE,
+            200,
+            'req_proxy',
+        ));
+
+        $listener->onKernelException($event);
+
+        $response = $event->getResponse();
+        self::assertInstanceOf(JsonResponse::class, $response);
+        self::assertSame(502, $response->getStatusCode());
+        self::assertSame([
+            'code' => 'invalid_response',
+            'message' => 'Invalid response: HTTP 200 body is not JSON',
+            'status' => 502,
+            'requestId' => 'req_proxy',
+        ], json_decode((string) $response->getContent(), true));
+    }
+
+    public function testAnIoErrorAnswers500WithANullStatus(): void
+    {
+        $listener = new PoliPageExceptionListener();
+        $event = $this->makeEvent(new PoliPageException('Failed to write PDF: Permission denied', PoliPageException::IO_ERROR));
+
+        $listener->onKernelException($event);
+
+        $response = $event->getResponse();
+        self::assertInstanceOf(JsonResponse::class, $response);
+        self::assertSame(500, $response->getStatusCode());
+        self::assertSame([
+            'code' => 'io_error',
+            'message' => 'Failed to write PDF: Permission denied',
+            'status' => null,
             'requestId' => null,
         ], json_decode((string) $response->getContent(), true));
     }

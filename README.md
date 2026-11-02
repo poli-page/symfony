@@ -21,7 +21,7 @@ This bundle wires the Poli Page PHP SDK into Symfony's container, EventDispatche
 
 - PHP 8.3+
 - Symfony 6.4 LTS or 7.x
-- [`poli-page/sdk`](https://packagist.org/packages/poli-page/sdk) 0.11.0 or later (Composer installs it with the bundle)
+- [`poli-page/sdk`](https://packagist.org/packages/poli-page/sdk) 0.13.x (Composer installs it with the bundle)
 - A Poli Page API key from [app.poli.page](https://app.poli.page)
 
 ## Install
@@ -111,7 +111,7 @@ final class InvoiceController
 |---|---|---|
 | `api_key` | _required_ | API key, `pp_{environment}_…` (see the key table above). Any non-empty value is accepted and the API decides; a value that does not look like `pp_{environment}_{32 hex}` logs one warning when the client is built. The warning names the expected format and shows no part of the key. |
 | `base_url` | SDK default | Override the API origin (must be http/https). |
-| `timeout` | SDK default | Per-request timeout in seconds (0 < t ≤ 600). |
+| `timeout` | SDK default | Timeout in seconds of each API call and of the PDF download (for `pdfStream()`, the longest wait for the next chunk); 0 < t ≤ 600. |
 | `retries.max_attempts` | SDK default | Retry budget (0–10). |
 | `retries.delay_seconds` | SDK default | Base delay before the first retry (0–30s). |
 | `http_client` | `symfony/http-client` | PSR-18 service id. |
@@ -156,7 +156,7 @@ The bundle registers a `kernel.exception` listener, on by default. A `PoliPage\P
 { "code": "TEMPLATE_NOT_FOUND", "message": "Template 'does-not-exist' not found in project 'getting-started'.", "status": 404, "requestId": "req_…" }
 ```
 
-- The HTTP status is the payload's `status`: the API's status (404, 429, 500, …), `503` for a `network_error` and `504` for a `timeout`. An SDK error with no status (for example `invalid_options`) answers `500`, with `"status": null` in the body.
+- The HTTP status is the payload's `status`: the API's status (404, 429, 500, …), `503` for a `network_error`, `504` for a `timeout` and `502` for an `invalid_response` (a 2xx whose body is not JSON, usually from a proxy between your app and the API). An SDK error with no status (for example `invalid_options`, or `io_error` from `renderToFile()`) answers `500`, with `"status": null` in the body.
 - `requestId` is the API's `x-request-id`, or `null` when there is none.
 - The `Content-Type` is `application/json`, with `Cache-Control: no-store, private`. The listener runs at priority `-10`, so Symfony still logs the exception first, and a listener of yours with a higher priority can answer instead.
 - If the request's response already started, the listener writes nothing more: the client sees a truncated download rather than JSON appended to the PDF. That is the case when a `StreamedResponse` callback throws (a streamed PDF whose download fails midway) and, on Symfony 7.1+, when a `kernel.terminate` listener throws. The check is made per response, not with `headers_sent()`, so in a long-running worker (RoadRunner, FrankenPHP worker mode) output sent earlier in the process does not change how a later request's error is answered.
@@ -173,12 +173,13 @@ poli_page:
 
 ### Exception types
 
-The SDK throws `PoliPage\PoliPageException` (or a subclass). Catch them in your controller where you want a different answer than the listener's. The four categories you typically discriminate on:
+The SDK throws `PoliPage\PoliPageException` (or a subclass). Catch them in your controller where you want a different answer than the listener's. The categories you typically discriminate on:
 
 - **Auth** — `PoliPage\Exception\AuthenticationException`. Invalid or missing API key.
 - **Rate limit** — `PoliPage\Exception\RateLimitException`. You hit the rate limit; retry per `Retry-After`.
 - **Request rejected** — `PoliPage\Exception\BadRequestException`. Template or data rejected by the API.
 - **Network / transport** — `PoliPage\Exception\ConnectionException` (includes `TimeoutException`). Connection failure, DNS, TLS, or timeout.
+- **Invalid response** — `PoliPage\Exception\InvalidResponseException`. A 2xx whose body is not JSON, usually from a proxy or captive portal; never retried.
 
 ```php
 use PoliPage\Exception\AuthenticationException;
@@ -219,11 +220,11 @@ composer serve   # → http://127.0.0.1:8000
 
 ## Compatibility
 
-| Bundle | Symfony | PHP |
-|---|---|---|
-| 0.11.x | 6.4 LTS / 7.x | 8.3 – 8.4 |
+| Bundle | `poli-page/sdk` | Symfony | PHP |
+|---|---|---|---|
+| 0.13.x | 0.13.x | 6.4 LTS / 7.x | 8.3 – 8.4 |
 
-Supported Symfony lines follow the upstream LTS schedule.
+The bundle shares its major.minor with the Poli Page API and requires the SDK of the same minor (see [RELEASING.md](RELEASING.md#versions)). Supported Symfony lines follow the upstream LTS schedule.
 
 ## Contributing
 
