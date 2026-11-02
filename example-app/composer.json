@@ -10,7 +10,7 @@
         "symfony/yaml": "^7.0",
         "poli-page/symfony": "@dev",
         "poli-page/sdk": "^0.13.0",
-        "symfony/dotenv": "^7.0"
+        "symfony/dotenv": "^8.1"
     },
     "repositories": [
         { "type": "path", "url": "../", "options": { "symlink": true, "versions": { "poli-page/symfony": "0.13.0" } } }
