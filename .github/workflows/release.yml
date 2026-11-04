@@ -31,6 +31,7 @@ jobs:
   test:
     permissions:
       contents: read
+      id-token: write # Codecov OIDC, granted to the called workflow
     uses: ./.github/workflows/ci.yml
 
   validate-version:
