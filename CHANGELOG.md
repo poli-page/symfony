@@ -4,6 +4,9 @@ All notable changes to `poli-page/symfony` are documented here. Format follows [
 
 ## [Unreleased]
 
+### Added
+- Symfony 8 support: every `symfony/*` requirement now also accepts `^8.0` (PHP 8.4+). Symfony 6.4 and 7.x stay supported.
+
 ## [0.13.0] - 2026-11-02
 
 First release on Packagist. It requires `poli-page/sdk` 0.13 and passes the Poli Page API contract v0.13.0. The bundle shares its major.minor with the Poli Page API, so its first version is 0.13.0; a 0.11.0 was prepared and never published, and neither was the 0.1.0 development line. The Changed, Removed and Fixed entries below describe changes made during those lines.

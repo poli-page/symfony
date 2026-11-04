@@ -145,14 +145,14 @@ final class RenderCommandTest extends TestCase
     #[DataProvider('removedOptionProvider')]
     public function testRemovedOptionsNoLongerExist(string $option): void
     {
-        $command = new RenderCommand($this->stubClient($this->createMock(Render::class)), self::API_KEY);
+        $command = new RenderCommand($this->stubClient($this->createStub(Render::class)), self::API_KEY);
 
         self::assertFalse($command->getDefinition()->hasOption($option));
     }
 
     public function testPoliPageExceptionExitsWithMappedCode(): void
     {
-        $render = $this->createMock(Render::class);
+        $render = $this->createStub(Render::class);
         $render->method('pdf')->willThrowException(
             new PoliPageException('Template not found', 'TEMPLATE_NOT_FOUND', 404),
         );
@@ -222,7 +222,7 @@ final class RenderCommandTest extends TestCase
     public function testOtherErrorOutputNeverContainsTheTrimmedApiKey(string $suffix): void
     {
         $key = self::API_KEY.$suffix;
-        $render = $this->createMock(Render::class);
+        $render = $this->createStub(Render::class);
         $render->method('pdf')->willThrowException(new InvalidArgumentException(
             '"Bearer '.rtrim($key, " \t").'" is not valid header value',
         ));
@@ -243,7 +243,7 @@ final class RenderCommandTest extends TestCase
 
     public function testPoliPageExceptionOutputNeverContainsTheApiKey(): void
     {
-        $render = $this->createMock(Render::class);
+        $render = $this->createStub(Render::class);
         $render->method('pdf')->willThrowException(new PoliPageException(
             'Invalid header: CR/LF/NUL found in "Authorization: Bearer '.self::API_KEY."\n\".",
             PoliPageException::NETWORK_ERROR,
