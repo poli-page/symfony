@@ -1,0 +1,88 @@
+---
+title: Errors
+description: How SDK errors reach a Symfony app, what the built-in exception listener answers, and how to handle them yourself.
+---
+
+Every failure the SDK throws is a `PoliPage\PoliPageException`, with an `errorCode`, an optional `status` and an optional `requestId`. The bundle registers a `kernel.exception` listener, so an exception your code does not catch becomes a JSON answer instead of a generic `500` error page.
+
+## The error
+
+The subclasses under `PoliPage\Exception\*` let you catch by family:
+
+- `AuthenticationException`: invalid or missing API key (HTTP 401).
+- `RateLimitException`: rate limit exceeded (HTTP 429). Honor `Retry-After`.
+- `BadRequestException`: template or data rejected by the API (HTTP 400).
+- `ConnectionException`: network or transport failure after the SDK's retry budget is spent. `TimeoutException` is a `ConnectionException`.
+- `InvalidResponseException`: a 2xx whose body is not JSON, usually from a proxy or captive portal. It is never retried.
+
+The predicates `isAuthError()`, `isRateLimitError()`, `isValidationError()`, `isNetworkError()` and `isRetryable()` read `status` and `errorCode`. The [SDK's Errors page](https://poli-page.github.io/sdk-php/production/errors/) lists every code.
+
+## What the listener answers
+
+An uncaught `PoliPageException` answers its `toPayload()` as `application/json`:
+
+```json
+{ "code": "TEMPLATE_NOT_FOUND", "message": "Template 'does-not-exist' not found in project 'getting-started'.", "status": 404, "requestId": "req_…" }
+```
+
+The HTTP status is the payload's `status`:
+
+| Error | Status |
+| --- | --- |
+| An API error | The API's status (404, 429, 500, …). |
+| `network_error` | `503` |
+| `timeout` | `504` |
+| `invalid_response` | `502` |
+| No status, for example `invalid_options` or `io_error` | `500`, with `"status": null` in the body. |
+
+`requestId` is the API's `x-request-id`, or `null` when there is none. The response carries `Cache-Control: no-store, private`.
+
+The listener runs at priority `-10`: Symfony still logs the exception first, and a `kernel.exception` listener of yours with a higher priority can answer instead.
+
+If the response has already started, the listener writes nothing more, so the client sees a truncated download rather than JSON appended to the PDF. That happens when a `StreamedResponse` callback throws, and, on Symfony 7.1 and later, when a `kernel.terminate` listener throws. The check is made per response, not with `headers_sent()`, so output sent earlier in a long-running worker does not change how a later request's error is answered.
+
+## Handle errors yourself
+
+Turn the listener off to answer SDK errors in your own way:
+
+```yaml
+# config/packages/poli_page.yaml
+poli_page:
+    exception_listener:
+        enabled: false
+```
+
+Without the listener, Symfony treats the exception like any other. Catch the exception in the controller when one route needs its own answer.
+
+## Example
+
+```php
+// src/Controller/InvoiceController.php
+use PoliPage\Exception\AuthenticationException;
+use PoliPage\Exception\BadRequestException;
+use PoliPage\Exception\ConnectionException;
+use PoliPage\Exception\RateLimitException;
+use PoliPage\PoliPageException;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+
+try {
+    $pdf = $this->poliPage->render->pdf($input);
+} catch (AuthenticationException $e) {
+    throw new HttpException(500, 'Poli Page credentials rejected.', $e);
+} catch (RateLimitException $e) {
+    return new JsonResponse(['error' => 'Try again shortly.'], 503);
+} catch (BadRequestException $e) {
+    return new JsonResponse(['error' => $e->getMessage()], 422);
+} catch (ConnectionException $e) {
+    throw new HttpException(502, 'Poli Page is unreachable.', $e);
+} catch (PoliPageException $e) {
+    throw new HttpException(500, 'Poli Page failed.', $e);
+}
+```
+
+## See also
+
+- [Configuration](../../concepts/configuration/)
+- [Responses](../../concepts/responses/)
+- [Testing](../testing/)

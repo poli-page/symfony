@@ -1,0 +1,23 @@
+---
+title: SDK
+description: The PHP SDK under poli-page/symfony, and where its documentation lives.
+---
+
+`poli-page/symfony` wraps the Poli Page PHP SDK, [`poli-page/sdk`](https://packagist.org/packages/poli-page/sdk). The `PoliPage\PoliPage` client you autowire, and its `render` and `documents` properties, are the SDK's own objects, so the SDK's documentation covers every method and type they have.
+
+→ **PHP SDK documentation**: https://poli-page.github.io/sdk-php/
+
+## Versions
+
+The bundle requires `poli-page/sdk` `^0.13.0`, the same major.minor as the bundle itself: both share the major.minor of the Poli Page API.
+
+| `poli-page/symfony` | `poli-page/sdk` | Symfony | PHP |
+| --- | --- | --- | --- |
+| `0.13.x` | `0.13.x` | `6.4` LTS or `7.x` | `8.3` or `8.4` |
+
+## Where to look
+
+- Render input, render methods and stored documents: the SDK's [Quick start](https://poli-page.github.io/sdk-php/getting-started/quick-start/) and [Render modes](https://poli-page.github.io/sdk-php/concepts/render-modes/) pages.
+- PSR-18 clients, factories and a mock client: the SDK's [PSR-18](https://poli-page.github.io/sdk-php/concepts/psr-18/) page.
+- Retries, timeouts and cancellation: the SDK's [Retries and idempotency](https://poli-page.github.io/sdk-php/production/retries-and-idempotency/) page.
+- Every error code: the SDK's [Errors](https://poli-page.github.io/sdk-php/production/errors/) page.
