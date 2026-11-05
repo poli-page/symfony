@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PoliPage\Symfony\Tests\Unit;
 
+use Closure;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use PoliPage\Symfony\Tests\Fixtures\TestKernel;
@@ -33,7 +34,7 @@ final class ConfigurationTest extends TestCase
         self::assertSame(TestKernel::API_KEY, $c->getParameter('poli_page.api_key'));
         self::assertNull($c->getParameter('poli_page.base_url'));
         self::assertNull($c->getParameter('poli_page.timeout'));
-        self::assertNull($c->getParameter('poli_page.retries.max_attempts'));
+        self::assertNull($c->getParameter('poli_page.retries.max_retries'));
         self::assertNull($c->getParameter('poli_page.retries.delay_seconds'));
         self::assertNull($c->getParameter('poli_page.on_retry'));
         self::assertNull($c->getParameter('poli_page.on_error'));
@@ -47,7 +48,7 @@ final class ConfigurationTest extends TestCase
             'api_key' => TestKernel::API_KEY,
             'base_url' => 'https://api.example.com',
             'timeout' => 45.0,
-            'retries' => ['max_attempts' => 5, 'delay_seconds' => 0.1],
+            'retries' => ['max_retries' => 5, 'delay_seconds' => 0.1],
             'logger' => 'logger',
             'on_retry' => 'app.retry_listener',
             'on_error' => 'app.error_listener',
@@ -62,7 +63,7 @@ final class ConfigurationTest extends TestCase
         self::assertSame(TestKernel::API_KEY, $c->getParameter('poli_page.api_key'));
         self::assertSame('https://api.example.com', $c->getParameter('poli_page.base_url'));
         self::assertSame(45.0, $c->getParameter('poli_page.timeout'));
-        self::assertSame(5, $c->getParameter('poli_page.retries.max_attempts'));
+        self::assertSame(5, $c->getParameter('poli_page.retries.max_retries'));
         self::assertSame(0.1, $c->getParameter('poli_page.retries.delay_seconds'));
         self::assertSame('app.retry_listener', $c->getParameter('poli_page.on_retry'));
         self::assertSame('app.error_listener', $c->getParameter('poli_page.on_error'));
@@ -97,20 +98,101 @@ final class ConfigurationTest extends TestCase
         (new TestKernel(['api_key' => TestKernel::API_KEY, 'timeout' => $value]))->boot();
     }
 
-    public function testRetriesMaxAttemptsTooHigh(): void
+    public function testRetriesMaxRetriesTooHigh(): void
     {
         $this->expectException(InvalidConfigurationException::class);
-        $this->expectExceptionMessageMatches('/max_attempts/');
+        $this->expectExceptionMessageMatches('/max_retries/');
 
-        (new TestKernel(['api_key' => TestKernel::API_KEY, 'retries' => ['max_attempts' => 11]]))->boot();
+        (new TestKernel(['api_key' => TestKernel::API_KEY, 'retries' => ['max_retries' => 11]]))->boot();
     }
 
-    public function testRetriesMaxAttemptsNegative(): void
+    public function testRetriesMaxRetriesNegative(): void
     {
         $this->expectException(InvalidConfigurationException::class);
-        $this->expectExceptionMessageMatches('/max_attempts/');
+        $this->expectExceptionMessageMatches('/max_retries/');
 
-        (new TestKernel(['api_key' => TestKernel::API_KEY, 'retries' => ['max_attempts' => -1]]))->boot();
+        (new TestKernel(['api_key' => TestKernel::API_KEY, 'retries' => ['max_retries' => -1]]))->boot();
+    }
+
+    public function testMaxRetriesDoesNotRaiseADeprecation(): void
+    {
+        $deprecations = $this->bootCollectingDeprecations(['max_retries' => 3]);
+
+        self::assertSame([], $deprecations);
+    }
+
+    public function testMaxAttemptsAliasFillsMaxRetriesAndRaisesADeprecation(): void
+    {
+        $kernel = new TestKernel(['api_key' => TestKernel::API_KEY, 'retries' => ['max_attempts' => 3]]);
+        $deprecations = $this->collectDeprecations(static fn () => $kernel->boot());
+
+        self::assertSame(3, $kernel->getContainer()->getParameter('poli_page.retries.max_retries'));
+        self::assertCount(1, $deprecations);
+        self::assertStringContainsString('retries.max_retries', $deprecations[0]);
+
+        $kernel->shutdown();
+    }
+
+    public function testMaxAttemptsAliasIsRangeChecked(): void
+    {
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessageMatches('/max_retries must be between 0 and 10/');
+
+        $this->bootCollectingDeprecations(['max_attempts' => 11]);
+    }
+
+    public function testMaxRetriesAndAliasWithDifferentValuesAreRefused(): void
+    {
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessageMatches('/max_retries.*max_attempts.*different values/');
+
+        $this->bootCollectingDeprecations(['max_retries' => 1, 'max_attempts' => 3]);
+    }
+
+    public function testMaxRetriesAndAliasWithEqualValuesAreAccepted(): void
+    {
+        $deprecations = $this->bootCollectingDeprecations(['max_retries' => 3, 'max_attempts' => 3]);
+
+        self::assertCount(1, $deprecations);
+    }
+
+    /**
+     * @param array<string, mixed> $retries
+     *
+     * @return list<string>
+     */
+    private function bootCollectingDeprecations(array $retries): array
+    {
+        $kernel = new TestKernel(['api_key' => TestKernel::API_KEY, 'retries' => $retries]);
+
+        try {
+            return $this->collectDeprecations(static fn () => $kernel->boot());
+        } finally {
+            $kernel->shutdown();
+        }
+    }
+
+    /**
+     * @return list<string> the E_USER_DEPRECATED messages raised while $run runs
+     */
+    private function collectDeprecations(Closure $run): array
+    {
+        $deprecations = [];
+        set_error_handler(static function (int $no, string $message) use (&$deprecations): bool {
+            $deprecations[] = $message;
+
+            return true;
+        }, \E_USER_DEPRECATED);
+
+        try {
+            $run();
+        } finally {
+            restore_error_handler();
+        }
+
+        // Symfony may finalize the config tree more than once per boot, so one
+        // deprecation can arrive several times: what matters is the message.
+        return array_values(array_unique($deprecations));
     }
 
     public function testRetriesDelaySecondsOutOfRange(): void

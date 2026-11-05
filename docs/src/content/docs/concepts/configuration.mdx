@@ -14,7 +14,7 @@ You configure the bundle under the `poli_page` key, in `config/packages/poli_pag
 | `api_key` | required | Your Poli Page API key, `pp_{environment}_{32 hex}`. Any non-empty value is accepted and the API decides. A malformed value logs one warning when the client is built. |
 | `base_url` | `null` (SDK default) | API endpoint. Must use `http` or `https`. An empty string counts as unset. |
 | `timeout` | `null` (SDK default) | Timeout in seconds of each API call and of the PDF download (for `pdfStream()`, the longest wait for the next chunk). Greater than `0` and at most `600`. |
-| `retries.max_attempts` | `null` (SDK default) | Automatic retries on 429 and 5xx. Between `0` and `10`. |
+| `retries.max_retries` | `null` (SDK default) | Retries after the first attempt, on 429 and 5xx: a call makes at most `max_retries + 1` attempts. Between `0` and `10`. `retries.max_attempts` is the deprecated former name, with the same meaning: it raises a deprecation, and setting both to different values is refused. |
 | `retries.delay_seconds` | `null` (SDK default) | Base delay before the first retry. Between `0` and `30`. |
 | `http_client` | `symfony/http-client` | Service id of a PSR-18 `ClientInterface`. |
 | `request_factory` | `nyholm/psr7` | Service id of a PSR-17 `RequestFactoryInterface`. |
@@ -32,7 +32,7 @@ The config is validated when the container is built, not in the middle of a rend
 
 - `base_url must use http or https scheme. Got: …`
 - `timeout must be > 0 and <= 600 seconds. Got: …`
-- `retries.max_attempts must be between 0 and 10. Got: …`
+- `retries.max_retries must be between 0 and 10. Got: …`
 - `retries.delay_seconds must be between 0 and 30 seconds. Got: …`
 
 A missing `api_key` is refused by Symfony's config tree, as any required option is.
@@ -59,7 +59,7 @@ poli_page:
     base_url: '%env(default::POLI_PAGE_BASE_URL)%'
     timeout: 30
     retries:
-        max_attempts: 3
+        max_retries: 3
         delay_seconds: 1
     exception_listener:
         enabled: true

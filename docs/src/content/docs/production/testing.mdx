@@ -14,7 +14,7 @@ Write a class that implements `Psr\Http\Client\ClientInterface` and returns queu
 poli_page:
     http_client: App\Tests\FakeHttpClient
     retries:
-        max_attempts: 0
+        max_retries: 0
 ```
 
 ```yaml
@@ -25,7 +25,7 @@ when@test:
             public: true
 ```
 
-`max_attempts: 0` keeps a faked 5xx or 429 answer from being retried. The bundle builds the client with your fake, so a controller gets it whether it autowires `PoliPage` or reads `poli_page.client`. A mock client library such as `php-http/mock-client` works the same way. See [Configuration](../../concepts/configuration/) for the `http_client` option.
+`max_retries: 0` keeps a faked 5xx or 429 answer from being retried. The bundle builds the client with your fake, so a controller gets it whether it autowires `PoliPage` or reads `poli_page.client`. A mock client library such as `php-http/mock-client` works the same way. See [Configuration](../../concepts/configuration/) for the `http_client` option.
 
 ## Fake an error
 

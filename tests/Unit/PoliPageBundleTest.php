@@ -75,7 +75,7 @@ final class PoliPageBundleTest extends TestCase
         $kernel = new TestKernel([
             'api_key' => TestKernel::API_KEY."\n",
             'base_url' => 'http://127.0.0.1:9',
-            'retries' => ['max_attempts' => 0],
+            'retries' => ['max_retries' => 0],
             'logger' => 'app.test_logger',
         ], ['app.test_logger' => BufferingLogger::class]);
         $kernel->boot();
@@ -131,7 +131,7 @@ final class PoliPageBundleTest extends TestCase
             'api_key' => TestKernel::API_KEY,
             'base_url' => 'https://api.example.com',
             'timeout' => 42.0,
-            'retries' => ['max_attempts' => 5, 'delay_seconds' => 0.1],
+            'retries' => ['max_retries' => 5, 'delay_seconds' => 0.1],
         ]);
         $kernel->boot();
 
