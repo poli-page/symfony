@@ -52,7 +52,7 @@ return static function (ContainerConfigurator $container): void {
         ->args([
             '$apiKey' => param('poli_page.api_key'),
             '$baseUrl' => param('poli_page.base_url'),
-            '$maxRetries' => param('poli_page.retries.max_attempts'),
+            '$maxRetries' => param('poli_page.retries.max_retries'),
             '$retryDelay' => param('poli_page.retries.delay_seconds'),
             '$timeout' => param('poli_page.timeout'),
             '$httpClient' => service('poli_page.http_client'),

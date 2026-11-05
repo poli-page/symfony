@@ -126,7 +126,7 @@ final class InvoiceController
 | `api_key` | _required_ | API key, `pp_{environment}_…` (see the key table above). Any non-empty value is accepted and the API decides; a value that does not look like `pp_{environment}_{32 hex}` logs one warning when the client is built. The warning names the expected format and shows no part of the key. |
 | `base_url` | SDK default | Override the API origin (must be http/https). |
 | `timeout` | SDK default | Timeout in seconds of each API call and of the PDF download (for `pdfStream()`, the longest wait for the next chunk); 0 < t ≤ 600. |
-| `retries.max_attempts` | SDK default | Retry budget (0–10). |
+| `retries.max_retries` | SDK default | Retries after the first attempt (0–10), so a call makes at most `max_retries + 1` attempts. `retries.max_attempts` is the deprecated former name, same meaning. |
 | `retries.delay_seconds` | SDK default | Base delay before the first retry (0–30s). |
 | `http_client` | `symfony/http-client` | PSR-18 service id. |
 | `request_factory` | `nyholm/psr7` | PSR-17 request-factory service id. |
@@ -142,7 +142,7 @@ poli_page:
     api_key: '%env(POLI_PAGE_API_KEY)%'
     timeout: 30
     retries:
-        max_attempts: 3
+        max_retries: 3
 ```
 
 You inspect the resolved config with `bin/console debug:config poli_page`.

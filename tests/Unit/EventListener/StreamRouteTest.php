@@ -98,7 +98,7 @@ final class StreamRouteTest extends TestCase
         self::assertIsArray($decoded);
         $mock = new MockServer(array_values($decoded));
         // One attempt per call: the retry policy is the SDK's, tested there.
-        $kernel = new TestKernel(['api_key' => TestKernel::API_KEY, 'base_url' => $mock->origin, 'retries' => ['max_attempts' => 0]]);
+        $kernel = new TestKernel(['api_key' => TestKernel::API_KEY, 'base_url' => $mock->origin, 'retries' => ['max_retries' => 0]]);
         try {
             $kernel->boot();
             $container = $kernel->getContainer();

@@ -5,13 +5,18 @@ All notable changes to `poli-page/symfony` are documented here. Format follows [
 ## [Unreleased]
 
 ### Added
+- `retries.max_retries`: the number of retries after the first attempt (0 to 10), passed to the SDK as `maxRetries`. The container parameter is `poli_page.retries.max_retries`.
 - Symfony 8 support: every `symfony/*` requirement now also accepts `^8.0` (PHP 8.4+). Symfony 6.4 and 7.x stay supported.
+
+### Deprecated
+- `retries.max_attempts` is renamed `retries.max_retries`. It never counted attempts: it was the SDK's `maxRetries`, so `3` made up to 4 attempts. The old key keeps its meaning and works, with a deprecation; setting both keys to different values throws `InvalidConfigurationException`. The container parameter is now `poli_page.retries.max_retries`; `poli_page.retries.max_attempts` is still set, to the same value, for apps that reference it.
 
 ## [0.13.0] - 2026-11-02
 
 First release on Packagist. It requires `poli-page/sdk` 0.13 and passes the Poli Page API contract v0.13.0. The bundle shares its major.minor with the Poli Page API, so its first version is 0.13.0; a 0.11.0 was prepared and never published, and neither was the 0.1.0 development line. The Changed, Removed and Fixed entries below describe changes made during those lines.
 
 ### Added
+- `retries.max_retries`: the number of retries after the first attempt (0 to 10), passed to the SDK as `maxRetries`. The container parameter is `poli_page.retries.max_retries`.
 - Modern `AbstractBundle` with full config tree covering every `PoliPage` constructor option.
 - Autowired `PoliPage` client (PSR-18 default: `symfony/http-client`; PSR-17 default: `nyholm/psr7`; PSR-3 default: `logger`).
 - `PoliPageResponseFactory` with `bytes` / `stream` / `preview` / `documentRedirect` builders.

@@ -7,6 +7,7 @@ namespace PoliPage\Symfony;
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
 use Symfony\Component\Config\Definition\Builder\NodeDefinition;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
@@ -48,13 +49,31 @@ final class PoliPageBundle extends AbstractBundle
                 ->end()
                 ->arrayNode('retries')
                     ->addDefaultsIfNotSet()
+                    ->beforeNormalization()
+                        // `max_attempts` is the deprecated former name of `max_retries`: same
+                        // meaning (retries after the first attempt), so it fills `max_retries`.
+                        ->ifTrue(static fn (mixed $v): bool => \is_array($v) && isset($v['max_attempts']))
+                        ->then(static function (array $v): array {
+                            if (isset($v['max_retries']) && $v['max_retries'] !== $v['max_attempts']) {
+                                throw new InvalidConfigurationException(\sprintf('retries.max_retries (%s) and its deprecated alias retries.max_attempts (%s) are both set, to different values. Keep retries.max_retries only.', json_encode($v['max_retries']), json_encode($v['max_attempts'])));
+                            }
+                            $v['max_retries'] = $v['max_attempts'];
+
+                            return $v;
+                        })
+                    ->end()
                     ->children()
-                        ->integerNode('max_attempts')
+                        ->integerNode('max_retries')
+                            ->info('Retries after the first attempt, so a call makes at most max_retries + 1 attempts.')
                             ->defaultNull()
                             ->validate()
                                 ->ifTrue(static fn (?int $v): bool => null !== $v && ($v < 0 || $v > 10))
-                                ->thenInvalid('retries.max_attempts must be between 0 and 10. Got: %s')
+                                ->thenInvalid('retries.max_retries must be between 0 and 10. Got: %s')
                             ->end()
+                        ->end()
+                        ->integerNode('max_attempts')
+                            ->setDeprecated('poli-page/symfony', '0.13.1', 'The "%node%" option is deprecated: it is the number of retries after the first attempt, not of attempts. Use "retries.max_retries" (same value).')
+                            ->defaultNull()
                         ->end()
                         ->floatNode('delay_seconds')
                             ->defaultNull()
@@ -104,7 +123,9 @@ final class PoliPageBundle extends AbstractBundle
         $builder->setParameter('poli_page.api_key', $config['api_key']);
         $builder->setParameter('poli_page.base_url', $config['base_url']);
         $builder->setParameter('poli_page.timeout', $config['timeout']);
-        $builder->setParameter('poli_page.retries.max_attempts', $config['retries']['max_attempts']);
+        $builder->setParameter('poli_page.retries.max_retries', $config['retries']['max_retries']);
+        // Kept for compatibility: apps may reference %poli_page.retries.max_attempts%. Same value.
+        $builder->setParameter('poli_page.retries.max_attempts', $config['retries']['max_retries']);
         $builder->setParameter('poli_page.retries.delay_seconds', $config['retries']['delay_seconds']);
         $builder->setParameter('poli_page.on_retry', $config['on_retry']);
         $builder->setParameter('poli_page.on_error', $config['on_error']);
