@@ -72,7 +72,7 @@ final class PoliPageBundle extends AbstractBundle
                             ->end()
                         ->end()
                         ->integerNode('max_attempts')
-                            ->setDeprecated('poli-page/symfony', '0.14.0', 'The "%node%" option is deprecated: it is the number of retries after the first attempt, not of attempts. Use "retries.max_retries" (same value).')
+                            ->setDeprecated('poli-page/symfony', '0.13.1', 'The "%node%" option is deprecated: it is the number of retries after the first attempt, not of attempts. Use "retries.max_retries" (same value).')
                             ->defaultNull()
                         ->end()
                         ->floatNode('delay_seconds')
@@ -124,6 +124,8 @@ final class PoliPageBundle extends AbstractBundle
         $builder->setParameter('poli_page.base_url', $config['base_url']);
         $builder->setParameter('poli_page.timeout', $config['timeout']);
         $builder->setParameter('poli_page.retries.max_retries', $config['retries']['max_retries']);
+        // Kept for compatibility: apps may reference %poli_page.retries.max_attempts%. Same value.
+        $builder->setParameter('poli_page.retries.max_attempts', $config['retries']['max_retries']);
         $builder->setParameter('poli_page.retries.delay_seconds', $config['retries']['delay_seconds']);
         $builder->setParameter('poli_page.on_retry', $config['on_retry']);
         $builder->setParameter('poli_page.on_error', $config['on_error']);

@@ -114,6 +114,18 @@ final class ConfigurationTest extends TestCase
         (new TestKernel(['api_key' => TestKernel::API_KEY, 'retries' => ['max_retries' => -1]]))->boot();
     }
 
+    public function testLegacyContainerParameterHoldsTheSameValue(): void
+    {
+        $kernel = new TestKernel(['api_key' => TestKernel::API_KEY, 'retries' => ['max_retries' => 4]]);
+        $kernel->boot();
+        $c = $kernel->getContainer();
+
+        self::assertSame(4, $c->getParameter('poli_page.retries.max_retries'));
+        self::assertSame(4, $c->getParameter('poli_page.retries.max_attempts'));
+
+        $kernel->shutdown();
+    }
+
     public function testMaxRetriesDoesNotRaiseADeprecation(): void
     {
         $deprecations = $this->bootCollectingDeprecations(['max_retries' => 3]);

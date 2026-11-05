@@ -9,7 +9,7 @@ All notable changes to `poli-page/symfony` are documented here. Format follows [
 - Symfony 8 support: every `symfony/*` requirement now also accepts `^8.0` (PHP 8.4+). Symfony 6.4 and 7.x stay supported.
 
 ### Deprecated
-- `retries.max_attempts` is renamed `retries.max_retries`. It never counted attempts: it was the SDK's `maxRetries`, so `3` made up to 4 attempts. The old key keeps its meaning and works, with a deprecation; setting both keys to different values throws `InvalidConfigurationException`. The `poli_page.retries.max_attempts` container parameter is now `poli_page.retries.max_retries`.
+- `retries.max_attempts` is renamed `retries.max_retries`. It never counted attempts: it was the SDK's `maxRetries`, so `3` made up to 4 attempts. The old key keeps its meaning and works, with a deprecation; setting both keys to different values throws `InvalidConfigurationException`. The container parameter is now `poli_page.retries.max_retries`; `poli_page.retries.max_attempts` is still set, to the same value, for apps that reference it.
 
 ## [0.13.0] - 2026-11-02
 
