@@ -1,0 +1,63 @@
+---
+title: Observability
+description: Log and trace Poli Page retries and failures from Symfony listeners with the PoliPageRetryEvent and PoliPageErrorEvent events.
+---
+
+The bundle forwards the SDK's `onRetry` and `onError` hooks onto Symfony's EventDispatcher. They are the integration's observability hooks: listen to them to log, count or trace what the client does behind your routes.
+
+## The events
+
+- `PoliPage\Symfony\Event\PoliPageRetryEvent` is dispatched each time the SDK decides to retry. Its `sdkEvent` property is the SDK's `RetryEvent`: `attempt`, `delayMs`, and `reason`, the `PoliPageException` that caused the retry.
+- `PoliPage\Symfony\Event\PoliPageErrorEvent` is dispatched when a request fails for good, after the retries. Its `exception` property is the `PoliPageException`.
+
+Both are read-only value objects, dispatched under their class names. The SDK does not wait for your listeners to act on the request, and it ignores an exception thrown from a hook.
+
+## Use your own callbacks
+
+Set `on_retry` or `on_error` in `config/packages/poli_page.yaml` to the id of a service with an `__invoke` method, and that service replaces the matching event bridge: the event is no longer dispatched. See [Configuration](../../concepts/configuration/).
+
+## Request IDs
+
+`$exception->requestId` is the API's `x-request-id`. Log it: it is what Poli Page support asks for. The built-in exception listener also sends `requestId` in the JSON body of every error answer.
+
+## Example
+
+```php
+// src/EventListener/PoliPageLogger.php
+namespace App\EventListener;
+
+use PoliPage\Symfony\Event\PoliPageErrorEvent;
+use PoliPage\Symfony\Event\PoliPageRetryEvent;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+
+final class PoliPageLogger
+{
+    public function __construct(private readonly LoggerInterface $logger) {}
+
+    #[AsEventListener]
+    public function onRetry(PoliPageRetryEvent $event): void
+    {
+        $this->logger->warning('Poli Page retry', [
+            'attempt' => $event->sdkEvent->attempt,
+            'delayMs' => $event->sdkEvent->delayMs,
+            'code' => $event->sdkEvent->reason->errorCode,
+        ]);
+    }
+
+    #[AsEventListener]
+    public function onError(PoliPageErrorEvent $event): void
+    {
+        $this->logger->error('Poli Page error', [
+            'code' => $event->exception->errorCode,
+            'requestId' => $event->exception->requestId,
+            'message' => $event->exception->getMessage(),
+        ]);
+    }
+}
+```
+
+## See also
+
+- [Configuration](../../concepts/configuration/)
+- [Errors](../errors/)

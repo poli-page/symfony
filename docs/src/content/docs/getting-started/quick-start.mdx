@@ -1,0 +1,59 @@
+---
+title: Quick start
+description: Return your first Poli Page PDF from a Symfony controller.
+---
+
+This page takes you from an installed bundle to a PDF answered by a controller route. You autowire the SDK client and the response factory, render a template, and let the factory set the PDF headers.
+
+## Install the bundle
+
+Install `poli-page/symfony`, register the bundle and set `POLI_PAGE_API_KEY`, as [Install](../install/) shows. The client is built the first time something needs it.
+
+## Render from a controller
+
+Type-hint `PoliPage\PoliPage` and `PoliPage\Symfony\Http\PoliPageResponseFactory` in the controller's constructor. `$poliPage->render->pdf(new RenderInput(...))` is the SDK's own call: it renders the template and returns the PDF bytes as a string.
+
+Pass the bytes to `$factory->bytes($pdf, $filename)`. It answers `200` with `Content-Type: application/pdf`, a `Content-Disposition` built from the filename, `Content-Length` and `Cache-Control: private, no-store`.
+
+The render needs a project and a template published to the environment of your key. Every organization has a `getting-started` project with a `welcome` template in `sandbox`, so `project: 'getting-started'`, `template: 'welcome'` and `data: ['name' => 'World']` work with a fresh `sandbox` key.
+
+## Example
+
+```php
+// src/Controller/InvoiceController.php
+namespace App\Controller;
+
+use PoliPage\PoliPage;
+use PoliPage\RenderInput;
+use PoliPage\Symfony\Http\PoliPageResponseFactory;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
+
+final class InvoiceController
+{
+    public function __construct(
+        private readonly PoliPage $poliPage,
+        private readonly PoliPageResponseFactory $factory,
+    ) {}
+
+    #[Route('/invoices/{id}', methods: ['GET'])]
+    public function show(string $id): Response
+    {
+        $pdf = $this->poliPage->render->pdf(new RenderInput(
+            project: 'billing',
+            template: 'invoice',
+            data: ['invoiceNumber' => $id],
+        ));
+
+        return $this->factory->bytes($pdf, "invoice-{$id}.pdf");
+    }
+}
+```
+
+`GET /invoices/INV-001` answers the PDF as `invoice-INV-001.pdf`.
+
+## See also
+
+- [Client access](../../concepts/client-access/)
+- [Responses](../../concepts/responses/)
+- [Errors](../../production/errors/)

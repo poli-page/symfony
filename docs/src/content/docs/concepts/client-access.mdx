@@ -1,0 +1,62 @@
+---
+title: Client access
+description: Reach the Poli Page client from Symfony through autowiring, the poli_page.client service id or the container.
+---
+
+The bundle registers one SDK client, `PoliPage\PoliPage`, as the public service `poli_page.client`, aliased under its class name. The client exposes `render` and `documents` as public properties, and every access path below returns that same instance, built from the `poli_page` config.
+
+## Autowiring
+
+Type-hint `PoliPage\PoliPage` in a controller, command, message handler or any service the container builds, then use `$poliPage->render` and `$poliPage->documents`:
+
+```php
+use PoliPage\PoliPage;
+
+public function __construct(private readonly PoliPage $poliPage) {}
+```
+
+`PoliPage\Symfony\Http\PoliPageResponseFactory` is autowireable the same way, under its class name.
+
+## The service id
+
+Use the id `poli_page.client` where autowiring does not apply, for example in a service definition:
+
+```yaml
+# config/services.yaml
+services:
+    App\Billing\InvoiceRenderer:
+        arguments:
+            $client: '@poli_page.client'
+```
+
+The client and the response factory (`poli_page.response_factory`) are public services, so `$container->get('poli_page.client')` works in a functional test as well. Do not fetch them from the container in application code: inject them.
+
+## Example
+
+```php
+// src/Billing/InvoiceRenderer.php
+namespace App\Billing;
+
+use PoliPage\PoliPage;
+use PoliPage\RenderInput;
+
+final class InvoiceRenderer
+{
+    public function __construct(private readonly PoliPage $poliPage) {}
+
+    public function render(string $number): string
+    {
+        return $this->poliPage->render->pdf(new RenderInput(
+            project: 'billing',
+            template: 'invoice',
+            data: ['invoiceNumber' => $number],
+        ));
+    }
+}
+```
+
+## See also
+
+- [Configuration](../configuration/)
+- [Responses](../responses/)
+- [Testing](../../production/testing/)

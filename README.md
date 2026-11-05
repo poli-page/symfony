@@ -1,6 +1,20 @@
 # Poli Page for Symfony
 
+[![Packagist](https://img.shields.io/packagist/v/poli-page/symfony?style=flat&logo=php&logoColor=ffffff&label=Packagist)](https://packagist.org/packages/poli-page/symfony)
+[![Downloads](https://img.shields.io/packagist/dt/poli-page/symfony?style=flat&logo=php&logoColor=ffffff&label=Downloads)](https://packagist.org/packages/poli-page/symfony)
+[![Ci](https://img.shields.io/github/actions/workflow/status/poli-page/symfony/ci.yml?branch=main&style=flat&logo=githubactions&logoColor=ffffff&label=Ci)](https://github.com/poli-page/symfony/actions/workflows/ci.yml)
+[![Codeql](https://img.shields.io/github/actions/workflow/status/poli-page/symfony/codeql.yml?branch=main&style=flat&logo=github&logoColor=ffffff&label=Codeql)](https://github.com/poli-page/symfony/actions/workflows/codeql.yml)
+[![Coverage](https://img.shields.io/codecov/c/github/poli-page/symfony?style=flat&logo=codecov&logoColor=ffffff&label=Coverage)](https://codecov.io/gh/poli-page/symfony)
+[![Php](https://img.shields.io/packagist/php-v/poli-page/symfony?style=flat&logo=php&logoColor=ffffff&label=Php)](https://packagist.org/packages/poli-page/symfony)
+[![Symfony](https://img.shields.io/badge/Symfony-6.4%20%7C%207-blue?style=flat&logo=symfony&logoColor=ffffff)](https://symfony.com/)
+[![Phpstan](https://img.shields.io/badge/Phpstan-8-blue?style=flat&logo=php&logoColor=ffffff)](phpstan.neon)
+[![Deps](https://img.shields.io/badge/Deps-up%20to%20date-brightgreen?style=flat&logo=php&logoColor=ffffff)](https://github.com/poli-page/symfony/network/dependencies)
+[![Docs](https://img.shields.io/badge/Docs-online-brightgreen?style=flat&logo=readthedocs&logoColor=ffffff)](https://poli-page.github.io/symfony/)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=flat&logo=gnu&logoColor=ffffff)](LICENSE)
+
 > Render Poli Page documents as Symfony controller responses.
+
+→ **Documentation**: https://poli-page.github.io/symfony/
 
 ## About
 

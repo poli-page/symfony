@@ -1,0 +1,86 @@
+---
+title: Responses
+description: Answer PDFs, streamed PDFs, HTML previews and document redirects from Symfony controllers with PoliPageResponseFactory.
+---
+
+`PoliPage\Symfony\Http\PoliPageResponseFactory` builds the HTTP answers for the four things a controller returns: PDF bytes, a streamed PDF, an HTML preview of a stored document, and a redirect to a stored document. Autowire it into your controller.
+
+Every response sets `Cache-Control: private, no-store`. The PDF responses also set `X-Content-Type-Options: nosniff`.
+
+## PDF
+
+`bytes(string $pdf, string $filename = 'document.pdf', bool $inline = false): Response` answers `200` with the bytes from `render->pdf()`.
+
+| Parameter | Default | Effect |
+| --- | --- | --- |
+| `$filename` | `'document.pdf'` | Sets the filename in `Content-Disposition`. |
+| `$inline` | `false` | `true` answers `inline` (the browser shows the PDF) instead of `attachment` (the browser downloads it). |
+
+The headers are `Content-Type: application/pdf`, `Content-Length` and `Content-Disposition`. The filename is cleaned before it goes in the header: control characters are removed, `/` and `\` become `_`, and an empty result falls back to `document.pdf`. The header carries an ASCII `filename` fallback, where each non-ASCII character becomes `?`, and a UTF-8 `filename*` for the exact name.
+
+## Streamed PDF
+
+`stream(StreamInterface $stream, string $filename = 'document.pdf', bool $inline = false): StreamedResponse` sends the PDF from `render->pdfStream()` while it downloads, so a large document does not sit in memory. It sends the body in 8192-byte chunks and sets `Content-Length` only when the stream reports a size.
+
+The factory rewinds a seekable stream and reads the first chunk before it returns, so a render or download error reaches the [exception listener](../../production/errors/) before any PDF header is sent. Call `render->pdfStream()` in the controller and pass its stream to `stream()`. If you call the SDK inside your own `StreamedResponse` callback, Symfony has already committed a `200 application/pdf`, and an error can only truncate the body.
+
+## HTML preview
+
+`preview(DocumentPreviewResult $preview): Response` answers the HTML of a stored document with `Content-Type: text/html; charset=utf-8`. The result comes from `documents->preview($id)`.
+
+## Redirect to a stored document
+
+`documentRedirect(DocumentDescriptor $doc): RedirectResponse` answers `302` to the document's `presignedPdfUrl`. `render->document()` stores the rendered document and returns the descriptor, and `documents->get($id)` returns it again later with a fresh URL. A presigned URL is valid for 15 minutes, so redirect from a route that fetches the descriptor, rather than storing the URL.
+
+## Example
+
+```php
+// src/Controller/InvoiceController.php
+namespace App\Controller;
+
+use PoliPage\PoliPage;
+use PoliPage\RenderInput;
+use PoliPage\Symfony\Http\PoliPageResponseFactory;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\Routing\Attribute\Route;
+
+final class InvoiceController
+{
+    public function __construct(
+        private readonly PoliPage $poliPage,
+        private readonly PoliPageResponseFactory $factory,
+    ) {}
+
+    #[Route('/invoices/{id}/pdf', methods: ['GET'])]
+    public function pdf(string $id): StreamedResponse
+    {
+        $stream = $this->poliPage->render->pdfStream(new RenderInput(
+            project: 'billing',
+            template: 'invoice',
+            data: ['invoiceNumber' => $id],
+        ));
+
+        return $this->factory->stream($stream, "invoice-{$id}.pdf", inline: true);
+    }
+
+    #[Route('/documents/{documentId}/preview', methods: ['GET'])]
+    public function preview(string $documentId): Response
+    {
+        return $this->factory->preview($this->poliPage->documents->preview($documentId));
+    }
+
+    #[Route('/documents/{documentId}/download', methods: ['GET'])]
+    public function download(string $documentId): RedirectResponse
+    {
+        return $this->factory->documentRedirect($this->poliPage->documents->get($documentId));
+    }
+}
+```
+
+## See also
+
+- [Quick start](../../getting-started/quick-start/)
+- [Errors](../../production/errors/)
+- [API reference](../../reference/api/)

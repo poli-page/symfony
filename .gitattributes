@@ -4,6 +4,7 @@
 # recipes/ is the source of the Symfony Flex recipe, which Flex reads from
 # symfony/recipes-contrib, not from the package.
 /.github export-ignore
+/docs export-ignore
 /example-app export-ignore
 /recipes export-ignore
 /tests export-ignore

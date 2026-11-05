@@ -1,0 +1,107 @@
+---
+title: API
+description: Every public class, config option and console command of poli-page/symfony, with signatures and exact behavior.
+---
+
+This page lists everything `poli-page/symfony` adds to a Symfony app, in the order a request meets it. The SDK types it hands you, `PoliPage\PoliPage`, `Render`, `Documents` and `PoliPageException`, are documented in the [SDK reference](../sdk/).
+
+## PoliPageBundle
+
+```php
+namespace PoliPage\Symfony;
+
+final class PoliPageBundle extends AbstractBundle
+```
+
+Registered in `config/bundles.php`. Its extension alias is `poli_page`.
+
+- **configure**: defines the config tree. Every option, its default and its range are in [Configuration](../../concepts/configuration/). `api_key` is required, and the other validation messages are listed there.
+- **loadExtension**: loads the services below and applies the config. It aliases `http_client`, `request_factory`, `stream_factory` and `logger` to the services you name, and replaces the default event bridges when `on_retry` or `on_error` is set. Unless `exception_listener.enabled` is `false`, it registers the exception listener.
+
+An `api_key` that does not match `pp_{environment}_{32 lowercase hex}` logs one warning through the PSR-3 logger, without the key, and the client is built anyway. An empty `base_url` counts as unset.
+
+## Services
+
+| Id | Class | Public | Notes |
+| --- | --- | --- | --- |
+| `poli_page.client` | `PoliPage\PoliPage` | yes | Also aliased as `PoliPage\PoliPage`, so it autowires. |
+| `poli_page.response_factory` | `PoliPage\Symfony\Http\PoliPageResponseFactory` | yes | Also aliased under its class name. |
+| `poli_page.exception_listener` | `PoliPage\Symfony\EventListener\PoliPageExceptionListener` | yes | Only when `exception_listener.enabled` is `true`. |
+| `poli_page.retry_listener` | `PoliPage\Symfony\EventListener\RetryListener` | yes | Dispatches `PoliPageRetryEvent`. Replaced by the `on_retry` service. |
+| `poli_page.error_listener` | `PoliPage\Symfony\EventListener\ErrorListener` | yes | Dispatches `PoliPageErrorEvent`. Replaced by the `on_error` service. |
+| `poli_page.command.render` | `PoliPage\Symfony\Console\RenderCommand` | no | Tagged `console.command`. |
+
+## PoliPageResponseFactory
+
+```php
+namespace PoliPage\Symfony\Http;
+
+final class PoliPageResponseFactory
+{
+    public function bytes(string $pdf, string $filename = 'document.pdf', bool $inline = false): Response;
+    public function stream(StreamInterface $stream, string $filename = 'document.pdf', bool $inline = false): StreamedResponse;
+    public function preview(DocumentPreviewResult $preview): Response;
+    public function documentRedirect(DocumentDescriptor $doc): RedirectResponse;
+}
+```
+
+- `bytes()` answers `200` with `Content-Type`, `Content-Length`, `Content-Disposition`, `Cache-Control: private, no-store` and `X-Content-Type-Options: nosniff`.
+- `stream()` rewinds a seekable stream and reads its first 8192 bytes before it returns, so a download error is thrown before any header is sent. It then sends the rest in 8192-byte chunks, flushing after each. `Content-Length` is set only when the stream reports a size of `0` or more.
+- `preview()` answers `200` with `Content-Type: text/html; charset=utf-8` and `Cache-Control: private, no-store`.
+- `documentRedirect()` answers `302` to the descriptor's `presignedPdfUrl`, with `Cache-Control: private, no-store`.
+
+The filename rules are on [Responses](../../concepts/responses/).
+
+## PoliPageExceptionListener
+
+```php
+namespace PoliPage\Symfony\EventListener;
+
+final class PoliPageExceptionListener implements EventSubscriberInterface
+{
+    public const PRIORITY = -10;
+    public const RESPONSE_PRIORITY = -2048;
+}
+```
+
+Subscribes to `kernel.exception` at priority `-10` and to `kernel.response` at priority `-2048`. For an uncaught `PoliPageException` it answers `$exception->toPayload()` as JSON with the payload's `status`, or `500` when it is `null`, and `Cache-Control: no-store, private`. When the response has already started, it answers an empty response and adds nothing to the bytes already sent. The `kernel.response` subscription marks exceptions thrown from a `StreamedResponse` callback, which is how it tells that case. The statuses are on [Errors](../../production/errors/).
+
+## Events
+
+```php
+namespace PoliPage\Symfony\Event;
+
+final readonly class PoliPageRetryEvent
+{
+    public function __construct(public RetryEvent $sdkEvent) {}
+}
+
+final readonly class PoliPageErrorEvent
+{
+    public function __construct(public PoliPageException $exception) {}
+}
+```
+
+Dispatched by the default `on_retry` and `on_error` bridges, under their class names. See [Observability](../../production/observability/).
+
+## poli-page:render
+
+```bash
+bin/console poli-page:render --project=<slug> --template=<slug> [--data=<json>] [--data-file=<path>] [-o <path>]
+```
+
+Renders a template to a PDF file, to check the integration end to end.
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `--project` | | Project slug. Required. |
+| `--template` | | Template slug. Required. |
+| `--data` | `{}` | Inline JSON for the data. Must decode to a JSON object. |
+| `--data-file` | | Read the JSON from a file, or from stdin with `-`. Takes precedence over `--data`. |
+| `-o`, `--output` | `./poli-page-render.pdf` | Output path. Missing parent directories are created. |
+
+Without `--project` or `--template`, the command prints `--project and --template are required.` and exits with `2`. On success it prints `Rendered <bytes> bytes in <ms>ms. Wrote to <path>.` and exits with `0`. When the SDK throws, it prints the message with the status, code and request ID, and exits with `1` for a 4xx status, `2` for a 5xx and `3` for an error with no status. Any other error from rendering or writing the file prints its message and exits with `1`. The API key is redacted from these messages.
+
+## SDK types
+
+The bundle re-exports no SDK type. Import `PoliPage\PoliPage`, `PoliPage\RenderInput`, `PoliPage\PoliPageException` and the `PoliPage\Exception\*` classes from `poli-page/sdk`.

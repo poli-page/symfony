@@ -1,0 +1,82 @@
+---
+title: Install
+description: Install poli-page/symfony with Composer, register the bundle and set POLI_PAGE_API_KEY.
+---
+
+`poli-page/symfony` is published on Packagist. It wraps the [Poli Page PHP SDK](https://packagist.org/packages/poli-page/sdk), which Composer installs with it, and adds an autowireable client, a response factory, a console command, Symfony events and an exception listener.
+
+## Requirements
+
+- PHP 8.3 or later.
+- Symfony 6.4 LTS or 7.x.
+- `poli-page/sdk` 0.13.x. Composer installs it with the bundle.
+- A Poli Page API key from [app.poli.page](https://app.poli.page).
+
+CI runs the unit and contract tests on PHP 8.3 and 8.4, against Symfony 6.4 and 7.
+
+## Install the packages
+
+```bash
+composer require poli-page/symfony
+```
+
+The bundle brings its own PSR-18 client, built on `symfony/http-client`, and its own PSR-17 factories, from `nyholm/psr7`. You do not install an HTTP adapter. To use other clients, see [Configuration](../../concepts/configuration/).
+
+## Set your API key
+
+Add the key to `.env.local`:
+
+```bash
+POLI_PAGE_API_KEY=pp_sandbox_…
+```
+
+Each API key belongs to one environment of your organization and has the form `pp_{environment}_{32 lowercase hex characters}`. Start with your `sandbox` key:
+
+| Environment | Key | Watermark | Counted |
+| --- | --- | --- | --- |
+| `sandbox` (every org) | `pp_sandbox_…` | yes | no |
+| `live` (every org, deletable on Pro+) | `pp_live_…` | no | yes |
+| created on Pro+ (for example `staging`) | `pp_staging_…` | no | yes |
+
+"Counted" means the render counts toward your organization's monthly PDF quota. The key picks the environment, and each render uses the copy of the project published in that environment, so there is no template version to pass.
+
+The bundle only requires a non-empty `api_key`. A value that does not match the format logs one warning through the PSR-3 logger when the client is built (the key itself is never logged), and the API answers `401` if it is invalid.
+
+## Register the bundle
+
+Add the bundle to `config/bundles.php`:
+
+```php
+return [
+    // ...
+    PoliPage\Symfony\PoliPageBundle::class => ['all' => true],
+];
+```
+
+Then create `config/packages/poli_page.yaml`:
+
+```yaml
+poli_page:
+    api_key: '%env(POLI_PAGE_API_KEY)%'
+```
+
+The bundle's Symfony Flex recipe is not accepted in `symfony/recipes-contrib` yet, so `composer require` does not do these steps for you.
+
+## Example
+
+Check the whole setup from the command line with a `sandbox` key. Every organization has the `getting-started` project with a `welcome` template in `sandbox`:
+
+```bash
+bin/console poli-page:render \
+    --project=getting-started \
+    --template=welcome \
+    --data='{"name":"World"}' \
+    -o welcome.pdf
+```
+
+The command writes `welcome.pdf` and prints the byte count and the elapsed time.
+
+## See also
+
+- [Quick start](../quick-start/)
+- [Configuration](../../concepts/configuration/)
