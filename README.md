@@ -34,7 +34,7 @@ This bundle wires the Poli Page PHP SDK into Symfony's container, EventDispatche
 ## Requirements
 
 - PHP 8.3+
-- Symfony 6.4 LTS or 7.x
+- Symfony 6.4 LTS, 7.x or 8.x (8.x needs PHP 8.4+)
 - [`poli-page/sdk`](https://packagist.org/packages/poli-page/sdk) 0.13.x (Composer installs it with the bundle)
 - A Poli Page API key from [app.poli.page](https://app.poli.page)
 
@@ -236,7 +236,7 @@ composer serve   # → http://127.0.0.1:8000
 
 | Bundle | `poli-page/sdk` | Symfony | PHP |
 |---|---|---|---|
-| 0.13.x | 0.13.x | 6.4 LTS / 7.x | 8.3 – 8.4 |
+| 0.13.x | 0.13.x | 6.4 LTS / 7.x / 8.x | 8.3 – 8.4 |
 
 The bundle shares its major.minor with the Poli Page API and requires the SDK of the same minor (see [RELEASING.md](RELEASING.md#versions)). Supported Symfony lines follow the upstream LTS schedule.
 

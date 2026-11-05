@@ -24,15 +24,19 @@ jobs:
       fail-fast: false
       matrix:
         php: ['8.3', '8.4']
-        symfony: ['6.4.*', '7.*']
+        symfony: ['6.4.*', '7.*', '8.*']
+        exclude:
+          # Symfony 8 requires PHP 8.4.
+          - php: '8.3'
+            symfony: '8.*'
         include:
-          # Coverage axis merged onto the existing (8.4, 7.*) cell: when every
+          # Coverage axis merged onto the existing (8.4, 8.*) cell: when every
           # axis of an `include` entry matches an existing matrix cell, the
           # extra key (`coverage`) is added rather than spawning a new job.
           # PCOV over Xdebug: ~10x faster, no debugger baggage. The newest
           # PHP and Symfony, as the example app builds on that cell too.
           - php: '8.4'
-            symfony: '7.*'
+            symfony: '8.*'
             coverage: pcov
     steps:
       - uses: actions/checkout@v7
@@ -107,8 +111,8 @@ jobs:
           POLI_CONTRACT: ${{ steps.contract.outputs.path }}
         run: vendor/bin/phpunit --testsuite=contract --testdox
       - name: Build the example app
-        # The example app requires Symfony 7.
-        if: matrix.symfony == '7.*'
+        # The example app requires Symfony 7 or 8.
+        if: matrix.symfony != '6.4.*'
         working-directory: symfony/example-app
         env:
           # debug:router builds the app; nothing is sent to the API.

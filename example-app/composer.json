@@ -5,12 +5,12 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
-        "symfony/framework-bundle": "^7.0",
-        "symfony/runtime": "^7.0",
-        "symfony/yaml": "^7.0",
+        "symfony/framework-bundle": "^7.0 || ^8.0",
+        "symfony/runtime": "^7.0 || ^8.0",
+        "symfony/yaml": "^7.0 || ^8.0",
         "poli-page/symfony": "@dev",
         "poli-page/sdk": "^0.13.0",
-        "symfony/dotenv": "^7.0"
+        "symfony/dotenv": "^7.0 || ^8.0"
     },
     "repositories": [
         { "type": "path", "url": "../", "options": { "symlink": true, "versions": { "poli-page/symfony": "0.13.0" } } }
