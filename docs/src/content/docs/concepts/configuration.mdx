@@ -1,0 +1,71 @@
+---
+title: Configuration
+description: Every option of the poli_page bundle config, its default and its valid range, and how to use your own HTTP client and logger.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+You configure the bundle under the `poli_page` key, in `config/packages/poli_page.yaml`. Only `api_key` is required. Run `bin/console debug:config poli_page` to see the resolved values.
+
+## Options
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `api_key` | required | Your Poli Page API key, `pp_{environment}_{32 hex}`. Any non-empty value is accepted and the API decides. A malformed value logs one warning when the client is built. |
+| `base_url` | `null` (SDK default) | API endpoint. Must use `http` or `https`. An empty string counts as unset. |
+| `timeout` | `null` (SDK default) | Timeout in seconds of each API call and of the PDF download (for `pdfStream()`, the longest wait for the next chunk). Greater than `0` and at most `600`. |
+| `retries.max_attempts` | `null` (SDK default) | Automatic retries on 429 and 5xx. Between `0` and `10`. |
+| `retries.delay_seconds` | `null` (SDK default) | Base delay before the first retry. Between `0` and `30`. |
+| `http_client` | `symfony/http-client` | Service id of a PSR-18 `ClientInterface`. |
+| `request_factory` | `nyholm/psr7` | Service id of a PSR-17 `RequestFactoryInterface`. |
+| `stream_factory` | `nyholm/psr7` | Service id of a PSR-17 `StreamFactoryInterface`. |
+| `logger` | `logger` | Service id of a PSR-3 `LoggerInterface`. |
+| `on_retry` | `null` | Service id of a service with `__invoke(RetryEvent)`. When set, replaces the default `PoliPageRetryEvent` bridge. |
+| `on_error` | `null` | Service id of a service with `__invoke(PoliPageException)`. When set, replaces the default `PoliPageErrorEvent` bridge. |
+| `exception_listener.enabled` | `true` | Answers an uncaught `PoliPageException` with its `toPayload()` JSON. Set to `false` to handle SDK errors yourself. |
+
+Every optional key that is `null` leaves the SDK to apply its own default.
+
+## Validation
+
+The config is validated when the container is built, not in the middle of a render. The error names the option and the value, for example:
+
+- `base_url must use http or https scheme. Got: …`
+- `timeout must be > 0 and <= 600 seconds. Got: …`
+- `retries.max_attempts must be between 0 and 10. Got: …`
+- `retries.delay_seconds must be between 0 and 30 seconds. Got: …`
+
+A missing `api_key` is refused by Symfony's config tree, as any required option is.
+
+## Your own HTTP client and logger
+
+`http_client`, `request_factory`, `stream_factory` and `logger` each take a service id. The bundle aliases its internal service to yours, so the service must implement the matching PSR interface. Leave them out to get the defaults: a PSR-18 client built on Symfony's `http_client` service, one `nyholm/psr7` factory for both PSR-17 roles, and the `logger` service.
+
+## The callbacks
+
+`on_retry` and `on_error` replace the default event bridges. The service gets the SDK's `RetryEvent` for `on_retry` and the `PoliPageException` for `on_error`. See [Observability](../../production/observability/) for the events the default bridges dispatch.
+
+<Aside type="caution">
+Setting `on_retry` or `on_error` turns the matching Symfony event off: no `PoliPageRetryEvent` or `PoliPageErrorEvent` is dispatched while it is set.
+</Aside>
+
+## Example
+
+```yaml
+# config/packages/poli_page.yaml
+poli_page:
+    api_key: '%env(POLI_PAGE_API_KEY)%'
+    # Optional: unset or empty means the SDK's default API URL.
+    base_url: '%env(default::POLI_PAGE_BASE_URL)%'
+    timeout: 30
+    retries:
+        max_attempts: 3
+        delay_seconds: 1
+    exception_listener:
+        enabled: true
+```
+
+## See also
+
+- [Client access](../client-access/)
+- [API reference](../../reference/api/)

@@ -1,0 +1,18 @@
+---
+title: Poli Page Symfony integration
+description: Render Poli Page documents from Symfony controllers with poli-page/symfony.
+template: splash
+hero:
+  tagline: Render Poli Page documents as Symfony controller responses.
+  actions:
+    - { text: Quick start, link: /symfony/getting-started/quick-start/, icon: rocket }
+    - { text: API reference, link: /symfony/reference/api/, icon: open-book }
+---
+
+import { CardGrid, Card } from '@astrojs/starlight/components';
+
+<CardGrid>
+  <Card title="Quick start" icon="rocket">Install the bundle and return a PDF from a controller.</Card>
+  <Card title="Concepts" icon="puzzle">The bundle configuration, client access through autowiring, PDF and preview responses.</Card>
+  <Card title="API reference" icon="open-book">Every class, option and command of `poli-page/symfony`, on one page.</Card>
+</CardGrid>

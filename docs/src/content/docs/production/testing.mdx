@@ -1,0 +1,117 @@
+---
+title: Testing
+description: Test Symfony code that renders Poli Page documents without calling the API, with a fake PSR-18 HTTP client.
+---
+
+Every part of the bundle reaches the API through one client, `PoliPage\PoliPage`, and the client reaches the network through one PSR-18 `ClientInterface`. In tests you replace that HTTP client with a fake, so your controllers, the response factory and the exception listener run without a network call. The SDK classes are `final`, so a fake HTTP client is the seam that needs no mocking tricks.
+
+## Override the client
+
+Write a class that implements `Psr\Http\Client\ClientInterface` and returns queued responses, make it a public service, and point the bundle at it in the `test` environment:
+
+```yaml
+# config/packages/test/poli_page.yaml
+poli_page:
+    http_client: App\Tests\FakeHttpClient
+    retries:
+        max_attempts: 0
+```
+
+```yaml
+# config/services.yaml
+when@test:
+    services:
+        App\Tests\FakeHttpClient:
+            public: true
+```
+
+`max_attempts: 0` keeps a faked 5xx or 429 answer from being retried. The bundle builds the client with your fake, so a controller gets it whether it autowires `PoliPage` or reads `poli_page.client`. A mock client library such as `php-http/mock-client` works the same way. See [Configuration](../../concepts/configuration/) for the `http_client` option.
+
+## Fake an error
+
+Queue an error answer: a 404 whose JSON body has a `code` and a `message`, and an `x-request-id` header, makes the SDK throw a `NotFoundException` with that code and request ID. The built-in exception listener then answers as in production, so a functional test can assert the JSON body and the status.
+
+To test your own error handling without the SDK, throw the exception yourself. `PoliPageException` has a public constructor: `new PoliPageException($message, $errorCode, $status, $requestId)`.
+
+## Test the response factory alone
+
+`PoliPageResponseFactory` is a plain class with no dependencies. Build it with `new PoliPageResponseFactory()` in a unit test and assert the headers of what it returns.
+
+## Example
+
+```php
+// tests/FakeHttpClient.php
+namespace App\Tests;
+
+use Psr\Http\Client\ClientInterface;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
+
+final class FakeHttpClient implements ClientInterface
+{
+    /** @var list<ResponseInterface> */
+    private array $queue = [];
+
+    public function queue(ResponseInterface $response): void
+    {
+        $this->queue[] = $response;
+    }
+
+    public function sendRequest(RequestInterface $request): ResponseInterface
+    {
+        return array_shift($this->queue) ?? throw new \LogicException('No response queued.');
+    }
+}
+```
+
+```php
+// tests/InvoiceRenderTest.php
+namespace App\Tests;
+
+use Nyholm\Psr7\Response;
+use PoliPage\Exception\NotFoundException;
+use PoliPage\PoliPage;
+use PoliPage\RenderInput;
+use PoliPage\Symfony\Http\PoliPageResponseFactory;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+
+final class InvoiceRenderTest extends KernelTestCase
+{
+    public function testAMissingTemplateThrowsNotFound(): void
+    {
+        self::bootKernel();
+        $container = self::getContainer();
+
+        $http = $container->get(FakeHttpClient::class);
+        $http->queue(new Response(404, ['Content-Type' => 'application/json', 'x-request-id' => 'req_123'], json_encode([
+            'code' => 'TEMPLATE_NOT_FOUND',
+            'message' => "Template 'invoice' not found in project 'billing'.",
+        ], JSON_THROW_ON_ERROR)));
+
+        try {
+            $container->get(PoliPage::class)->render->pdf(new RenderInput(
+                project: 'billing',
+                template: 'invoice',
+                data: ['invoiceNumber' => 'INV-001'],
+            ));
+            self::fail('Expected a NotFoundException.');
+        } catch (NotFoundException $e) {
+            self::assertSame('TEMPLATE_NOT_FOUND', $e->errorCode);
+            self::assertSame('req_123', $e->requestId);
+        }
+    }
+
+    public function testTheFactorySetsThePdfHeaders(): void
+    {
+        $response = (new PoliPageResponseFactory())->bytes('%PDF-1.7', 'invoice-INV-001.pdf');
+
+        self::assertSame('application/pdf', $response->headers->get('Content-Type'));
+        self::assertStringContainsString('invoice-INV-001.pdf', (string) $response->headers->get('Content-Disposition'));
+    }
+}
+```
+
+## See also
+
+- [Client access](../../concepts/client-access/)
+- [Errors](../errors/)

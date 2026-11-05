@@ -13,11 +13,27 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # `id-token: write` is needed by the Codecov upload step (OIDC auth).
+    # `contents: read` re-stated because declaring permissions at the job
+    # level replaces, and does not merge with, the defaults. release.yml
+    # calls this workflow, so its `test` job grants the same two.
+    permissions:
+      contents: read
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
         php: ['8.3', '8.4']
         symfony: ['6.4.*', '7.*']
+        include:
+          # Coverage axis merged onto the existing (8.4, 7.*) cell: when every
+          # axis of an `include` entry matches an existing matrix cell, the
+          # extra key (`coverage`) is added rather than spawning a new job.
+          # PCOV over Xdebug: ~10x faster, no debugger baggage. The newest
+          # PHP and Symfony, as the example app builds on that cell too.
+          - php: '8.4'
+            symfony: '7.*'
+            coverage: pcov
     steps:
       - uses: actions/checkout@v7
         with:
@@ -25,7 +41,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          coverage: none
+          coverage: ${{ matrix.coverage || 'none' }}
           # Global Symfony Flex is what reads extra.symfony.require (set by the
           # next step); without it the pin is ignored and every leg resolves 7.x.
           tools: flex
@@ -63,7 +79,28 @@ jobs:
         working-directory: symfony
         env:
           POLI_CONTRACT: ${{ steps.contract.outputs.path }}
-        run: vendor/bin/phpunit --testsuite=unit
+        run: |
+          if [ -n "${{ matrix.coverage }}" ]; then
+            vendor/bin/phpunit --testsuite=unit --coverage-clover=coverage.xml
+          else
+            vendor/bin/phpunit --testsuite=unit
+          fi
+      # Upload only on the single matrix entry that produced coverage.xml.
+      # `fail_ci_if_error: false` keeps a Codecov outage from breaking CI:
+      # coverage is informational; the suite has already passed by here.
+      # `use_oidc: true` authenticates via the GitHub-issued OIDC token
+      # instead of a long-lived upload token. Public-repo tokenless uploads
+      # are rejected on the default branch ("Token required because branch
+      # is protected"), and OIDC avoids both the secret-rotation overhead
+      # and that rejection.
+      - name: Upload coverage to Codecov
+        if: matrix.coverage != ''
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          files: symfony/coverage.xml
+          fail_ci_if_error: false
+          use_oidc: true
+          slug: poli-page/symfony
       - name: Contract tests
         working-directory: symfony
         env:

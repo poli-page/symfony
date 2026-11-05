@@ -42,3 +42,4 @@ composer.lock
 CLAUDE.md
 docs/plan/
 docs/spec/
+docs/.astro/
