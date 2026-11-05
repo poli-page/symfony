@@ -4,6 +4,8 @@ All notable changes to `poli-page/symfony` are documented here. Format follows [
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-11-05
+
 ### Added
 - `retries.max_retries`: the number of retries after the first attempt (0 to 10), passed to the SDK as `maxRetries`. The container parameter is `poli_page.retries.max_retries`.
 - Symfony 8 support: every `symfony/*` requirement now also accepts `^8.0` (PHP 8.4+). Symfony 6.4 and 7.x stay supported.
@@ -66,5 +68,6 @@ First release on Packagist. It requires `poli-page/sdk` 0.13 and passes the Poli
 - `composer install` in `example-app/` no longer errors with "non-existent script @auto-scripts" on PHP 8.5+.
 - `PoliPageResponseFactory::bytes()` / `stream()`: control characters (CR/LF, TAB, DEL, C1) are now stripped from the `Content-Disposition` filename instead of surviving as `?` in the fallback and `%0D%0A` in `filename*`. Filenames containing `/`, `\` or `%` no longer throw `InvalidArgumentException` from `HeaderUtils::makeDisposition()` (a 500): path separators become `_`, and `%` becomes `?` in the ASCII fallback only. The fallback now has one `?` per non-ASCII character (was one per UTF-8 byte), and a filename made only of control characters falls back to `document.pdf`.
 
-[Unreleased]: https://github.com/poli-page/symfony/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/poli-page/symfony/compare/v0.13.1...HEAD
+[0.13.1]: https://github.com/poli-page/symfony/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/poli-page/symfony/releases/tag/v0.13.0
