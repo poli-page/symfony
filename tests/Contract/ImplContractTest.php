@@ -33,7 +33,7 @@ final class ImplContractTest extends TestCase
 
     private const SKIP_LIST = __DIR__.'/../contract-skip.json';
 
-    private const FORMAT_VERSION = 1;
+    private const FORMAT_VERSION = 2;
 
     private const API_KEY = 'pp_sandbox_0123456789abcdef0123456789abcdef';
 
