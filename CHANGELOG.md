@@ -4,7 +4,7 @@ All notable changes to `poli-page/symfony` are documented here. Format follows [
 
 ## [Unreleased]
 
-## [0.15.0] - 2026-11-16
+## [0.15.0] - 2026-11-17
 
 ### Changed
 - Requires `poli-page/sdk` 0.15 (`^0.15.0`) and passes the Poli Page API contract v0.15.0. The contract's integration cases (`impl.*`) are unchanged from v0.13.0.
