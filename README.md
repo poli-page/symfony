@@ -6,7 +6,7 @@
 [![Codeql](https://img.shields.io/github/actions/workflow/status/poli-page/symfony/codeql.yml?branch=main&style=flat&logo=github&logoColor=ffffff&label=Codeql)](https://github.com/poli-page/symfony/actions/workflows/codeql.yml)
 [![Coverage](https://img.shields.io/codecov/c/github/poli-page/symfony?style=flat&logo=codecov&logoColor=ffffff&label=Coverage)](https://codecov.io/gh/poli-page/symfony)
 [![Php](https://img.shields.io/packagist/php-v/poli-page/symfony?style=flat&logo=php&logoColor=ffffff&label=Php)](https://packagist.org/packages/poli-page/symfony)
-[![Symfony](https://img.shields.io/badge/Symfony-6.4%20%7C%207-blue?style=flat&logo=symfony&logoColor=ffffff)](https://symfony.com/)
+[![Symfony](https://img.shields.io/badge/Symfony-6.4%20%7C%207%20%7C%208-blue?style=flat&logo=symfony&logoColor=ffffff)](https://symfony.com/)
 [![Phpstan](https://img.shields.io/badge/Phpstan-8-blue?style=flat&logo=php&logoColor=ffffff)](phpstan.neon)
 [![Deps](https://img.shields.io/badge/Deps-up%20to%20date-brightgreen?style=flat&logo=php&logoColor=ffffff)](https://github.com/poli-page/symfony/network/dependencies)
 [![Docs](https://img.shields.io/badge/Docs-online-brightgreen?style=flat&logo=readthedocs&logoColor=ffffff)](https://poli-page.github.io/symfony/)
